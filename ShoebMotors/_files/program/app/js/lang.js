@@ -272,7 +272,7 @@ var Lang = (function () {
     'পুরো টাকা জমা রাখা যায়নি — পরে Cash Collection থেকে যোগ করুন।': 'Could not record the payment — add it later from Cash Collection.',
     'বিস্তারিত হিসাব দেখতে চান?': 'Want to see detailed analysis?',
     'যে হিসাব দরকার, সেটি বেছে নিন': 'Choose the section you want to review',
-    'এই মাসের হিসাব': 'This month overview', 'এই মাসের ইনভয়েস': "This month's invoices",
+    'এই মাসের হিসাব': 'This month overview', 'এই মাসের ইনভয়েস': "This month's invoices", 'আজকের ইনভয়েস': "Today's invoices",
     /* ---------- বাকি তালিকা (Due list) ---------- */
     'বাকি তালিকা': 'Due list', 'মোট পাওনা': 'Total due', 'মোট বাকি': 'Total due',
     'বাকি ইনভয়েস': 'Due invoices', 'রিমাইন্ডার': 'Reminder', 'সর্বশেষ ইনভয়েস': 'Latest invoice',

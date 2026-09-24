@@ -7,7 +7,6 @@ var Dashboard = (function () {
   function pcs(list) {
     return sum(list, function (s) { return (s.items || []).reduce(function (x, i) { return x + F.num(i.qty); }, 0); });
   }
-  function monthRange() { return { from: F.startOfMonth(), to: F.today() }; }
   function setDashboardMoney(id, v) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -25,7 +24,7 @@ var Dashboard = (function () {
     var tProfit = sum(todayList, function (s) { return s.profit; });
 
     setDashboardMoney('kpiTodaySales', tSales);
-    document.getElementById('kpiTodayCount').textContent = todayList.length + ' টি ইনভয়েস · ' + F.qty(pcs(todayList)) + ' পিস';
+    document.getElementById('kpiTodayCount').textContent = F.qty(pcs(todayList)) + ' পিস বিক্রি';
 
     /* --- আজকের cash collection status --- */
     var todayCollections = DB.collectionsInRange(today, today);
@@ -113,12 +112,8 @@ var Dashboard = (function () {
       }
     }
 
-    /* --- এই মাসের এক লাইন --- */
-    var mr = monthRange();
-    var monthList = DB.salesInRange(mr.from, mr.to);
-    var mSales = sum(monthList, function (s) { return s.total; });
-    document.getElementById('kpiMonthInv').textContent = monthList.length;
-    document.getElementById('kpiMonthInvSub').textContent = F.qty(pcs(monthList)) + ' পিস বিক্রি';
+    /* --- আজকের ইনভয়েস --- */
+    document.getElementById('kpiTodayInv').textContent = todayList.length;
 
     document.getElementById('dashDate').textContent = F.weekday(today) + ', ' + F.d(today);
 
@@ -127,7 +122,7 @@ var Dashboard = (function () {
     var tiles = [
       {
         jump: 'reports', cls: 't-red', label: 'রিপোর্ট',
-        value: moneyWithHover(mSales), sub: 'দিনভিত্তিক ও পণ্যভিত্তিক বিক্রির হিসাব'
+        value: moneyWithHover(tSales), sub: 'দিনভিত্তিক ও পণ্যভিত্তিক বিক্রির হিসাব'
       },
       {
         jump: 'customers', cls: 't-amber', label: 'কাস্টমার',
@@ -135,7 +130,7 @@ var Dashboard = (function () {
       },
       {
         jump: 'sales', cls: 't-ink', label: 'বিক্রি ও ইনভয়েস',
-        value: invCount(monthList) + ' টি', sub: 'এই মাসের ইনভয়েস — যেকোনো বিল খুলে আবার ছাপতে পারবেন'
+        value: invCount(todayList) + ' টি', sub: 'আজকের ইনভয়েস'
       },
       {
         jump: 'stock', cls: 't-slate', label: 'স্টক',
