@@ -264,8 +264,6 @@ var Customers = (function () {
       '<label>মোবাইল নম্বর<input id="cfPhone" value="' + F.esc(c ? c.phone : '') + '" inputmode="text" lang="bn" pattern="[0-9০-৯ +()-]*" maxlength="20"></label>' +
       '</div>' +
       '<label>ঠিকানা<input id="cfAddress" value="' + F.esc(c ? addressText(c) : '') + '"></label>' +
-      (isNew ? '<div class="grid2"><label>আগের বকেয়া (না থাকলে খালি রাখুন)<input id="cfOpening" inputmode="decimal" autocomplete="off"></label>' +
-        '<label>আগের বকেয়ার নোট<input id="cfOpeningNote" autocomplete="off" placeholder="যেমন: পুরোনো খাতার বাকি"></label></div>' : '') +
       '<div class="section-title">এই কাস্টমারের গাড়ি</div>' +
       '<div id="vehList">' + ((c && c.vehicles && c.vehicles.length) ? c.vehicles.map(vehicleRow).join('') : '') + '</div>' +
       '<button class="btn small ghost" type="button" id="addVehBtn">＋ গাড়ি যোগ করুন</button>' +
@@ -305,11 +303,6 @@ var Customers = (function () {
                 createdAt: new Date().toISOString(), vehicles: vehicles, payments: [], openingDues: []
               };
               DB.state.customers.push(c);
-              var openingRaw = document.getElementById('cfOpening').value.trim();
-              if (openingRaw) {
-                try { DB.addOpeningDue(c.id, openingRaw, DB.todayStr(), document.getElementById('cfOpeningNote').value); }
-                catch (err) { DB.state.customers.pop(); UI.toast(F.esc(err.message), 'bad'); return; }
-              }
               DB.nextNo('customer');
               UI.toast('কাস্টমার <b>' + F.esc(nameBn) + '</b> যোগ হয়েছে।', 'ok');
             } else {
@@ -468,6 +461,8 @@ var Customers = (function () {
 
     document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total) + ' · মোট বাকি: ' + F.money(DB.round2(invoiceDueTotal + openingDueTotal));
     var account = DB.duePaymentAccount('id:' + id);
+    var addOpeningBtn = document.getElementById('cpAddOpeningBtn');
+    if (addOpeningBtn) addOpeningBtn.hidden = DB.openingEntries(id).length > 0;
     var payAllBtn = document.getElementById('cpPayDueBtn');
     if (payAllBtn) {
       payAllBtn.hidden = account.total <= 0.009;
@@ -490,23 +485,33 @@ var Customers = (function () {
   }
 
   /* ------- আগের বকেয়া: যোগ / বদল / মুছুন / টাকা জমা ------- */
-  function openingForm(cid, entryId) {
+  function openingForm(cid, entryId, draft) {
     var e = entryId ? DB.openingEntries(cid).filter(function (x) { return x.id === entryId; })[0] : null;
     if (entryId && !e) { UI.toast('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।', 'bad'); return; }
+    var v = draft || (e ? { amount: String(e.amount), date: e.date, note: e.note } : { amount: '', date: F.today(), note: '' });
     UI.modal({ title: e ? 'আগের বকেয়া বদলান' : 'আগের বকেয়া যোগ করুন',
-      body: '<div class="grid2"><label>টাকার পরিমাণ<input id="odAmount" inputmode="decimal" autocomplete="off" value="' + (e ? F.esc(String(e.amount)) : '') + '"></label>' +
-        '<label>তারিখ<input id="odDate" type="date" value="' + F.esc(e ? e.date : F.today()) + '"></label></div>' +
-        '<label>নোট<input id="odNote" autocomplete="off" placeholder="যেমন: পুরোনো খাতার বাকি" value="' + (e ? F.esc(e.note) : '') + '"></label>' +
-        (e && e.paid > 0 ? '<p class="tiny muted">এই বকেয়া থেকে ইতিমধ্যে জমা: ' + F.money(e.paid) + '। এর চেয়ে কম লেখা যাবে না।</p>' :
-          '<p class="tiny muted">এই টাকা কাস্টমারের বর্তমান বাকির সাথে যোগ হবে এবং কেনাকাটার হিসাবে ইনভয়েসের মতো দেখাবে।</p>'),
+      body: '<div class="grid2"><label>টাকার পরিমাণ<input id="odAmount" inputmode="decimal" autocomplete="off" value="' + F.esc(v.amount) + '"></label>' +
+        '<label>তারিখ<input id="odDate" type="date" value="' + F.esc(v.date) + '"></label></div>' +
+        '<label>নোট<input id="odNote" autocomplete="off" value="' + F.esc(v.note) + '"></label>',
       buttons: [{ label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
         { label: 'সেভ করুন', cls: 'primary', onClick: function () {
-          var amount = document.getElementById('odAmount').value, date = document.getElementById('odDate').value, note = document.getElementById('odNote').value;
-          try {
-            if (e) DB.updateOpeningDue(cid, e.id, amount, date, note);
-            else DB.addOpeningDue(cid, amount, date, note);
-          } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
-          UI.closeModal(); App.refreshAll(); UI.toast(e ? 'আগের বকেয়া বদল হয়েছে।' : 'আগের বকেয়া যোগ হয়েছে।', 'ok');
+          var d = { amount: document.getElementById('odAmount').value, date: document.getElementById('odDate').value, note: document.getElementById('odNote').value };
+          if (e) {
+            try { DB.updateOpeningDue(cid, e.id, d.amount, d.date, d.note); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+            UI.closeModal(); App.refreshAll(); UI.toast('আগের বকেয়া বদল হয়েছে।', 'ok');
+            return;
+          }
+          var amount;
+          try { amount = DB.checkNewOpeningDue(cid, d.amount, d.date); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+          var c = DB.customerById(cid);
+          UI.confirmDialog({ title: 'আগের বকেয়া যোগ করবেন?',
+            message: '<b>' + F.esc(c.nameBn || c.name || '') + '</b> — <b>' + F.money(amount) + '</b> আগের বকেয়া যোগ হবে। একবার যোগ করলে এই কাস্টমারের জন্য আর আগের বকেয়া যোগ করা যাবে না।',
+            confirmText: 'হ্যাঁ, যোগ করুন' })
+            .then(function (ok) {
+              if (!ok) { openingForm(cid, null, d); return; }
+              try { DB.addOpeningDue(cid, d.amount, d.date, d.note); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+              App.refreshAll(); UI.toast('আগের বকেয়া যোগ হয়েছে।', 'ok');
+            });
         } }],
       onOpen: function (root) { root.querySelector('#odAmount').focus(); }
     });

@@ -998,10 +998,17 @@ var DB = (function () {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !isFinite(parsed.getTime()) || todayStr(parsed) !== d) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
     return d;
   }
-  function addOpeningDue(cid, value, date, note) {
+  /* আগের বকেয়া প্রতি কাস্টমারে একবারই যোগ করা যায়। যোগ করার আগে (নিশ্চিত করার আগে) যাচাই। */
+  function checkNewOpeningDue(cid, value, date) {
     var c = customerById(cid), amount = balanceAmount(value);
     if (!c) throw new Error('কাস্টমার পাওয়া যায়নি।');
+    if ((c.openingDues || []).length) throw new Error('এই কাস্টমারের আগের বকেয়া আগেই যোগ করা হয়েছে।');
     if (amount <= 0) throw new Error('আগের বকেয়ার পরিমাণ শূন্যের বেশি হতে হবে।');
+    openingDate(date);
+    return amount;
+  }
+  function addOpeningDue(cid, value, date, note) {
+    var c = customerById(cid), amount = checkNewOpeningDue(cid, value, date);
     var e = { id: uid('od'), date: openingDate(date), amount: amount, note: String(note || '').trim(), createdAt: iso() };
     c.openingDues = c.openingDues || [];
     c.openingDues.push(e);
@@ -1184,7 +1191,7 @@ round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
     on: on, emit: emit, fixText: fixText, repairText: repairText,
     get fixedTexts() { return fixedTexts; },
     productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
-    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, updateOpeningDue: updateOpeningDue, deleteOpeningDue: deleteOpeningDue, collectOpeningDue: collectOpeningDue,
+    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, deleteOpeningDue: deleteOpeningDue, collectOpeningDue: collectOpeningDue,
     customerBalance: customerBalance, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
     salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
