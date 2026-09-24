@@ -22,7 +22,7 @@
   if(m)m.setAttribute('content',r==='dark'?'#090e14':'#f5f6f7');
 })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=20260924-today-card">
+<link rel="stylesheet" href="css/style.css?v=20260924-overdue-card">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -189,6 +189,8 @@
         <div class="dash-stat"><span class="m-lab">পুরোনো বাকি আদায়</span><b class="m-val" id="kpiTodayOldCollected">—</b></div>
         <div class="dash-stat"><span class="m-lab">নতুন কাস্টমার</span><b class="m-val" id="kpiTodayNewCustomers">—</b></div>
         <div class="dash-stat"><span class="m-lab">সবচেয়ে বেশি বিক্রি</span><b class="m-val dash-top-item" id="kpiTodayTopItem">—</b></div>
+        <div class="dash-stat dash-stat-link" data-jump="due"><span class="m-lab">মেয়াদ পার হওয়া বাকি</span><b class="m-val" id="kpiOverdue">—</b></div>
+        <div class="dash-stat dash-stat-link" data-jump="due"><span class="m-lab">মোট পাওনা (সব কাস্টমার)</span><b class="m-val" id="kpiTotalReceivable">—</b></div>
       </div>
     </div>
 
@@ -825,7 +827,7 @@
 <script src="js/store.js?v=20260924-sup-opening"></script>
 <script src="js/cloud.js?v=1215-20260920"></script>
 <script src="js/theme.js?v=1215-20260920"></script>
-<script src="js/lang.js?v=20260924-today-card"></script>
+<script src="js/lang.js?v=20260924-overdue-card"></script>
 <script src="js/format.js?v=1215-20260920"></script>
 <script src="js/ui.js?v=20260924-opening-entries"></script>
 <script src="js/customers.js?v=20260924-no-opening-delete"></script>
@@ -836,7 +838,7 @@
 <script src="js/collections.js?v=1221-20260923"></script>
 <script src="js/due.js?v=20260924-cust-due"></script>
 <script src="js/dayclosing.js?v=1221-20260923"></script>
-<script src="js/dashboard.js?v=20260924-today-card"></script>
+<script src="js/dashboard.js?v=20260924-overdue-card"></script>
 <script src="js/reports.js?v=20260924-report-cards"></script>
 <script src="js/settings.js?v=1215-20260920"></script>
 <script src="js/app.js?v=20260924-suppliers"></script>

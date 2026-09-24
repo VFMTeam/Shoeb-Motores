@@ -3003,3 +3003,6 @@ html[data-theme="dark"] .modal .inv-note *{color:#fff !important;-webkit-text-fi
 
 /* ড্যাশবোর্ড: আজকের সবচেয়ে বেশি বিক্রি হওয়া পণ্যের নাম এক লাইনে */
 .dash-top-item{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.dash-stat-link{cursor:pointer}
+.dash-stat-link:hover{outline:1px solid var(--line)}
+.dash-stat .m-val small{font-size:12px;font-weight:700;opacity:.8}

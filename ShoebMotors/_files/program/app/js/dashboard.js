@@ -86,6 +86,15 @@ var Dashboard = (function () {
     var kd = document.getElementById('kpiDueReminder'); if (kd) kd.textContent = remList.length;
     var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = remList.length ? 'মেয়াদ পার হওয়া বাকি — টাকা তুলুন' : 'কোনো বাকি রিমাইন্ডার নেই';
 
+    /* আজকের কার্ড: যাদের টাকা দেওয়ার তারিখ পার হয়েছে, আর সব কাস্টমারের মোট পাওনা */
+    var overdueTotal = DB.round2(remList.reduce(function (a, x) { return a + x.due; }, 0));
+    var ov = document.getElementById('kpiOverdue');
+    if (ov) {
+      ov.innerHTML = remList.length ? moneyWithHover(overdueTotal) + ' <small>· ' + remList.length + ' জন</small>' : '০ জন';
+      ov.classList.toggle('pend', remList.length > 0);
+    }
+    setDashboardMoney('kpiTotalReceivable', DB.trackedDueTotal());
+
     var dueBanner = document.getElementById('dueReminderBanner');
     if (dueBanner) {
       if (remList.length) {
