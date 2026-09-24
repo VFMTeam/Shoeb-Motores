@@ -43,10 +43,8 @@ var Sales = (function () {
     var s = DB.saleById(id);
     if (!s) return;
     var items = [
-      { key: 'a4', label: 'ইনভয়েস দেখুন (A4)', cls: 'primary' },
       { key: 'a5', label: 'A5 ইনভয়েস' },
-      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট (80mm)' },
-      { key: 'wa', label: 'বিল পাঠান' }
+      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট (80mm)' }
     ];
     if (s.collectionTracking === true && F.num(s.due) > 0.009) items.push({ key: 'collect', label: '＋ ক্যাশ' });
     if (DB.saleHasPending(s)) items.push({ key: 'price', label: 'দাম বসান' });
@@ -62,10 +60,8 @@ var Sales = (function () {
           b.onclick = function () {
             var k = b.getAttribute('data-act');
             UI.closeModal();
-            if (k === 'a4') UI.openInvoice(id);
-            else if (k === 'a5') UI.openInvoice(id, 'a5');
+            if (k === 'a5') UI.openInvoice(id, 'a5');
             else if (k === 'thermal') UI.printInvoice(DB.saleById(id), '80');
-            else if (k === 'wa') whatsapp(DB.saleById(id));
             else if (k === 'collect') Collections.open(id);
             else if (k === 'price') setPrices(id);
             else if (k === 'del') remove(id);
@@ -121,7 +117,8 @@ var Sales = (function () {
         '<td class="num"><b>' + F.money(s.total) + '</b>' + (F.num(s.discount) > 0 ? '<div class="cell-sub">ছাড় ' + F.money(s.discount) + '</div>' : '') + '</td>' +
         '<td class="num">' + (DB.saleHasPending(s) ? '<span class="tag warn">দর বসান</span>' : '<span class="tag ok">সম্পূর্ণ</span>') + '</td>' +
         '<td><div class="row-actions">' +
-        '<button class="btn small" data-actions="' + s.id + '">ইনভয়েস ▾</button>' +
+        '<button class="btn small primary" data-view="' + s.id + '">ইনভয়েস দেখুন</button>' +
+        '<button class="btn small ghost" data-actions="' + s.id + '">আরও ▾</button>' +
         '</div></td>' +
         '</tr>';
     }).join('') : UI.emptyRow(7, 'এই ফিল্টারে কোনো ইনভয়েস নেই।');
@@ -139,6 +136,7 @@ var Sales = (function () {
       if (next) next.onclick = function () { if (salesPage < totalPages) { salesPage++; render(); } };
     }
 
+    tb.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { UI.openInvoice(b.getAttribute('data-view')); }; });
     tb.querySelectorAll('[data-actions]').forEach(function (b) { b.onclick = function () { actions(b.getAttribute('data-actions')); }; });
 
     var total = list.reduce(function (a, s) { return a + F.num(s.total); }, 0);

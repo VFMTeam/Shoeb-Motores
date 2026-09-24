@@ -2642,7 +2642,7 @@ html,body{
   #sidebarNav {
     grid-area:navigation;
     display:grid;
-    grid-template-columns:repeat(10,minmax(0,1fr));
+    grid-template-columns:repeat(11,minmax(0,1fr));
     gap:6px;
     padding:0;
     width:100%;

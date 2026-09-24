@@ -98,6 +98,8 @@ var DB = (function () {
       expenses: [],
       heldSales: [],
       dayClosings: [],
+      suppliers: [],               /* সাপ্লায়ার — কার কাছ থেকে মাল কিনি */
+      supplierPayments: [],        /* সাপ্লায়ারকে দেওয়া টাকা */
       counters: { invoice: 0, product: 0, customer: 0, payment: 0, expense: 0, vehicle: 0 }
     };
   }
@@ -130,6 +132,18 @@ var DB = (function () {
     s.sales = s.sales || []; s.expenses = s.expenses || [];
     s.heldSales = s.heldSales || [];
     s.dayClosings = Array.isArray(s.dayClosings) ? s.dayClosings : [];
+    s.suppliers = Array.isArray(s.suppliers) ? s.suppliers : [];
+    s.supplierPayments = Array.isArray(s.supplierPayments) ? s.supplierPayments : [];
+    /* আগের স্টক-ক্রয়ে সাপ্লায়ারের নাম শুধু লেখা হিসেবে ছিল — একই নামের সাপ্লায়ার তৈরি করে ক্রয়টি তার সাথে যুক্ত করা হয়। */
+    (s.products || []).forEach(function (p) {
+      (p.purchases || []).forEach(function (x) {
+        var nm = String(x.supplier || '').trim();
+        if (x.supplierId || !nm) return;
+        var sup = s.suppliers.filter(function (y) { return String(y.name || '').trim().toLowerCase() === nm.toLowerCase(); })[0];
+        if (!sup) { sup = { id: 'sup_' + (s.suppliers.length + 1) + '_' + Date.now().toString(36), name: nm, phone: '', address: '', note: '', createdAt: new Date().toISOString() }; s.suppliers.push(sup); }
+        x.supplierId = sup.id;
+      });
+    });
     // receipts = every money-in event (money taken on an invoice + payments against old dues)
     s.receipts = s.receipts || [];
     if (s.payments && s.payments.length) {
@@ -1045,6 +1059,67 @@ var DB = (function () {
     return { saved: saved, receipt: rec };
   }
 
+  /* ------------------------- সাপ্লায়ার ------------------------- */
+  function supplierById(id) { return (state.suppliers || []).filter(function (x) { return x.id === id; })[0]; }
+  function saveSupplier(id, data) {
+    var name = String(data.name || '').trim();
+    if (!name) throw new Error('সাপ্লায়ারের নাম লিখুন।');
+    var dup = (state.suppliers || []).filter(function (x) { return x.id !== id && String(x.name || '').trim().toLowerCase() === name.toLowerCase(); })[0];
+    if (dup) throw new Error('এই নামে একজন সাপ্লায়ার আগেই আছে।');
+    var sup = id ? supplierById(id) : null;
+    if (id && !sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if (!sup) { sup = { id: uid('sup'), createdAt: iso() }; state.suppliers = state.suppliers || []; state.suppliers.push(sup); }
+    sup.name = name; sup.phone = String(data.phone || '').trim(); sup.address = String(data.address || '').trim();
+    sup.updatedAt = iso();
+    // নাম বদলালে পুরোনো ক্রয়ের লেখা নামও মিলিয়ে রাখা হয়
+    state.products.forEach(function (p) { (p.purchases || []).forEach(function (x) { if (x.supplierId === sup.id) x.supplier = sup.name; }); });
+    save();
+    return sup;
+  }
+  function purchaseTotal(x) { return round2(num(x.total) || (num(x.qty) * num(x.buyPrice))); }
+  function supplierPurchases(id) {
+    var out = [];
+    state.products.forEach(function (p) {
+      (p.purchases || []).forEach(function (x) {
+        if (x.supplierId !== id) return;
+        out.push({ date: x.date, productId: p.id, product: p.description || p.name || '', unit: p.unit || 'পিস', qty: num(x.qty), buyPrice: num(x.buyPrice), total: purchaseTotal(x), note: x.note || '' });
+      });
+    });
+    return out.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+  }
+  function supplierPaymentsOf(id) {
+    return (state.supplierPayments || []).filter(function (r) { return r.supplierId === id; })
+      .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)); });
+  }
+  function supplierStats(id) {
+    var purchases = supplierPurchases(id), payments = supplierPaymentsOf(id);
+    var total = round2(purchases.reduce(function (a, x) { return a + x.total; }, 0));
+    var paid = round2(payments.reduce(function (a, r) { return a + num(r.amount); }, 0));
+    var last = purchases.length ? purchases[0].date : '';
+    return { purchases: purchases, payments: payments, total: total, paid: paid, due: round2(total - paid), last: last };
+  }
+  function addSupplierPayment(id, value, date, note) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    if (!sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if (amount <= 0) throw new Error('টাকার পরিমাণ শূন্যের বেশি হতে হবে।');
+    var d = String(date || '') || todayStr();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    var rec = { id: uid('spay'), supplierId: id, supplierName: sup.name, amount: amount, date: d, note: String(note || '').trim(), createdAt: iso() };
+    state.supplierPayments = state.supplierPayments || [];
+    state.supplierPayments.push(rec);
+    save();
+    return rec;
+  }
+  function removeSupplierPayment(payId) {
+    var rec = (state.supplierPayments || []).filter(function (r) { return r.id === payId; })[0];
+    if (!rec) return false;
+    archiveDeleted('supplier-payment', (rec.supplierName || 'সাপ্লায়ার') + ' — ' + num(rec.amount), rec, { amount: num(rec.amount), date: rec.date });
+    state.supplierPayments = state.supplierPayments.filter(function (r) { return r.id !== payId; });
+    save();
+    return true;
+  }
+
+
   function customerBalance(cid) {
     if (!cid) return 0;
     var due = openingDue(cid);
@@ -1181,7 +1256,7 @@ round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
     get fixedTexts() { return fixedTexts; },
     productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
     openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, collectOpeningDue: collectOpeningDue,
-    customerBalance: customerBalance, customerStats: customerStats, productStats: productStats,
+    customerBalance: customerBalance, supplierById: supplierById, saveSupplier: saveSupplier, supplierStats: supplierStats, addSupplierPayment: addSupplierPayment, removeSupplierPayment: removeSupplierPayment, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
     salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
     receiptsInRange: receiptsInRange, collectionsInRange: collectionsInRange,

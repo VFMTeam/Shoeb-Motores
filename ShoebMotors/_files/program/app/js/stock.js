@@ -270,6 +270,7 @@ var Stock = (function () {
       '<label><span class="lbl" id="pfSellLbl">বিক্রয়মূল্য</span><input id="pfSell" type="number" step="0.01" min="0" value="' + F.esc(curSell) + '"></label>' +
       '<label>সম্ভাব্য বিক্রয় মোট<input id="pfTotal" type="text" readonly value="0.00"></label>' +
       '<label>কম স্টকের সীমা<input id="pfLowStock" type="number" step="1" min="0" value="' + (isNew ? (F.num(DB.state.settings.lowStockLevel) || 2) : F.num(p.lowStock)) + '"></label>' +
+      (isNew ? supplierFields('pf') : '') +
       '</div>' +
       (isNew ? '<label class="check" style="margin-top:10px"><input type="checkbox" id="pfMore"> আরও পণ্য যোগ করব (একই ধরন)</label>' : '');
 
@@ -334,6 +335,7 @@ var Stock = (function () {
         if (qEl) qEl.oninput = calcTotal;
         if (rEl) rEl.oninput = calcTotal;
         applyCfg(); firstRun = false; calcTotal();
+        if (isNew) bindSupplierFields(root, 'pf');
         var c0 = cfgFor(typeEl.value);
         (c0.descReq ? root.querySelector('#pfDescription') : root.querySelector('#pfBrand')).focus();
       },
@@ -363,6 +365,8 @@ var Stock = (function () {
       var qty = F.num(v('pfQty'));
       var lowStock = Math.max(0, Math.floor(F.num(v('pfLowStock'))));
       if (isNew && qty <= 0) { UI.toast('পরিমাণ লিখুন (০-এর বেশি)।', 'bad'); return; }
+      var supInfo = null;
+      if (isNew) { try { supInfo = readSupplierFields(root, 'pf'); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; } }
       if (!isNew && qty < 0) { UI.toast('পরিমাণ ঠিক লিখুন।', 'bad'); return; }
 
       var pending = sell <= 0;
@@ -389,8 +393,9 @@ var Stock = (function () {
           active: true, createdAt: new Date().toISOString(), purchases: [], adjustments: []
         }, data);
         np.qty = qty;
-        if (np.qty) np.purchases.push({ date: DB.todayStr(), qty: np.qty, buyPrice: np.buyPrice, buyPricePending: np.buyPricePending === true, supplier: '', note: '' });
+        if (np.qty) np.purchases.push({ date: DB.todayStr(), qty: np.qty, buyPrice: np.buyPrice, buyPricePending: np.buyPricePending === true, supplier: '', supplierId: '', note: '' });
         DB.state.products.push(np);
+        if (np.qty && supInfo) finishSupplier(supInfo, np.purchases[np.purchases.length - 1], description);
         if (!DB.save('product-create')) {
           DB.state.products = DB.state.products.filter(function (x) { return x.id !== np.id; });
           DB.state.counters.product = Math.max(0, F.num(DB.state.counters.product) - 1);
@@ -499,6 +504,49 @@ var Stock = (function () {
     });
   }
 
+  /* ---------------- সাপ্লায়ার নির্বাচন (ড্রপডাউন) ---------------- */
+  function supplierFields(prefix) {
+    var list = (DB.state.suppliers || []).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    return '<label>সাপ্লায়ার<select id="' + prefix + 'Supplier"><option value="">— সাপ্লায়ার নেই —</option>' +
+      list.map(function (x) { return '<option value="' + F.esc(x.id) + '">' + F.esc(x.name) + '</option>'; }).join('') +
+      '<option value="__new">＋ নতুন সাপ্লায়ার</option></select></label>' +
+      '<label data-sup-new hidden>নতুন সাপ্লায়ারের নাম<input id="' + prefix + 'SupplierNew" autocomplete="off"></label>' +
+      '<label data-sup-paid hidden>সাপ্লায়ারকে এখন দিলেন<input id="' + prefix + 'SupplierPaid" type="number" step="0.01" min="0"></label>';
+  }
+  function bindSupplierFields(root, prefix) {
+    var sel = root.querySelector('#' + prefix + 'Supplier');
+    function sync() {
+      root.querySelector('[data-sup-new]').hidden = sel.value !== '__new';
+      root.querySelector('[data-sup-paid]').hidden = !sel.value;
+    }
+    sel.onchange = function () { sync(); if (sel.value === '__new') root.querySelector('#' + prefix + 'SupplierNew').focus(); };
+    sync();
+  }
+  /* ফর্মের মান যাচাই — কিছু সেভ করার আগে; ভুল থাকলে Error */
+  function readSupplierFields(root, prefix) {
+    var v = root.querySelector('#' + prefix + 'Supplier').value;
+    var paidRaw = String(root.querySelector('#' + prefix + 'SupplierPaid').value || '').trim();
+    var out = { id: '', name: '', newName: '', paid: v ? F.num(paidRaw) : 0 };
+    if (out.paid < 0) throw new Error('সাপ্লায়ারকে দেওয়া টাকা ঠিক লিখুন।');
+    if (v === '__new') {
+      out.newName = String(root.querySelector('#' + prefix + 'SupplierNew').value || '').trim();
+      if (!out.newName) throw new Error('নতুন সাপ্লায়ারের নাম লিখুন।');
+      var same = (DB.state.suppliers || []).filter(function (x) { return String(x.name).trim().toLowerCase() === out.newName.toLowerCase(); })[0];
+      if (same) { out.id = same.id; out.name = same.name; out.newName = ''; }
+    } else if (v) {
+      var sup = DB.supplierById(v);
+      if (sup) { out.id = sup.id; out.name = sup.name; }
+    }
+    return out;
+  }
+  /* ক্রয় সেভ হওয়ার পর: নতুন সাপ্লায়ার তৈরি ও এখন দেওয়া টাকা লিখে রাখা */
+  function finishSupplier(info, purchase, label) {
+    if (info.newName) { var sup = DB.saveSupplier(null, { name: info.newName }); info.id = sup.id; info.name = sup.name; }
+    if (!info.id) return;
+    purchase.supplierId = info.id; purchase.supplier = info.name;
+    if (info.paid > 0) DB.addSupplierPayment(info.id, String(info.paid), purchase.date || DB.todayStr(), label + ' — ক্রয়ের সময় দেওয়া');
+  }
+
   /* ---------------- স্টক যোগ (ক্রয়): সাপ্লায়ার · কত পিস · কত টাকা ---------------- */
   function addStockForm(id) {
     var p = DB.productById(id);
@@ -506,10 +554,10 @@ var Stock = (function () {
     var body = '' +
       '<div class="inv-note" style="margin-bottom:10px">এখন স্টকে আছে: <b>' + F.qty(p.qty) + ' ' + F.esc(u) + '</b> · ' + F.esc(productType(p)) + '</div>' +
       '<div class="grid2">' +
-      '<label>সাপ্লায়ার / কোথা থেকে<input id="asSupplier" type="text"></label>' +
+      supplierFields('as') +
       '<label>তারিখ<input id="asDate" type="date"></label>' +
       '<label>কত ' + u + ' নিলেন *<input id="asQty" type="number" step="' + (u === 'পিস' ? '1' : '0.01') + '" min="' + (u === 'পিস' ? '1' : '0.01') + '"></label>' +
-      '<label>মোট কত টাকা দিলেন<input id="asTotal" type="number" step="0.01" min="0"></label>' +
+      '<label>মোট দাম<input id="asTotal" type="number" step="0.01" min="0"></label>' +
       '<label>ক্রয়মূল্য — প্রতি ' + u + '<input id="asBuy" type="number" step="0.01" min="0"></label>' +
       '<label>বিক্রয়মূল্য — প্রতি ' + u + '<input id="asSell" type="number" step="0.01" min="0"></label>' +
       '</div>' +
@@ -532,9 +580,10 @@ var Stock = (function () {
             if (!buyRaw && enteredTotal > 0 && qty > 0) buy = DB.round2(enteredTotal / qty);
             var total = enteredTotal > 0 ? DB.round2(enteredTotal) : DB.round2(qty * buy);
             var hasBuy = buy > 0;
-            var supplier = root.querySelector('#asSupplier').value.trim();
             var note = root.querySelector('#asNote').value.trim();
             if (qty <= 0) { UI.toast('কত ' + u + ' পেয়েছেন লিখুন।', 'bad'); return; }
+            var supInfo;
+            try { supInfo = readSupplierFields(root, 'as'); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
             var oldQty = F.num(p.qty), oldBuy = F.num(p.buyPrice);
             var newQty = oldQty + qty;
             if (hasBuy) {
@@ -550,10 +599,12 @@ var Stock = (function () {
             if (sell > 0) { p.sellPrice = sell; p.pricePending = false; }
             if (F.num(p.buyPrice) > 0 && DB.backfillMissingProductCost) DB.backfillMissingProductCost(p.id, p.buyPrice);
             p.purchases = p.purchases || [];
-            p.purchases.push({
+            var purchase = {
               date: root.querySelector('#asDate').value || DB.todayStr(), qty: qty, buyPrice: buy, buyPricePending: !hasBuy,
-              total: total, supplier: supplier, note: note
-            });
+              total: total, supplier: '', supplierId: '', note: note
+            };
+            p.purchases.push(purchase);
+            finishSupplier(supInfo, purchase, label(p));
             DB.save(); UI.closeModal();
             UI.toast(F.qty(qty) + ' ' + u + ' স্টকে যোগ' + (hasBuy ? ' · ' + F.money(total) : ' · ক্রয়মূল্য পরে দিতে পারবেন'), 'ok');
             render();
@@ -562,6 +613,7 @@ var Stock = (function () {
         }
       ],
       onOpen: function (root) {
+        bindSupplierFields(root, 'as');
         var qty = root.querySelector('#asQty');
         var total = root.querySelector('#asTotal');
         var buy = root.querySelector('#asBuy');

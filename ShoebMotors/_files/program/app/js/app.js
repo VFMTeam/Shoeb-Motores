@@ -67,6 +67,7 @@ var TITLES = {
     collections: ['ক্যাশ কালেকশন', 'পুরো বা আংশিক টাকা যোগ করুন'],
     due: ['বাকি তালিকা', 'কার কাছে কত টাকা পাওনা আছে'],
     customers: ['কাস্টমার', 'কাস্টমারের তথ্য ও হিসাব'],
+    suppliers: ['সাপ্লায়ার', 'সাপ্লায়ারের হিসাব'],
     dayclosing: ['Day Closing', 'দিন শেষে টাকার হিসাব'],
     reports: ['রিপোর্ট', 'লাভ-ক্ষতির রিপোর্ট'],
     settings: ['সেটিংস', 'ইনভয়েস, ডেটা ও নিরাপত্তা']
@@ -167,7 +168,7 @@ var TITLES = {
       return;
     }
     if (view === 'settings') settingsGateBypass = false;
-    if ((view === 'reports' || view === 'dayclosing') && !DB.isOwnerUnlocked) {
+    if ((view === 'reports' || view === 'dayclosing' || view === 'suppliers' || view === 'supplier') && !DB.isOwnerUnlocked) {
       requireOwner(function () { show(view); });
       return;
     }
@@ -190,6 +191,7 @@ var TITLES = {
     if (view === 'dayclosing') DayClosing.render();
     if (view === 'customers') Customers.render();
     if (view === 'customer') { /* rendered by Customers.open */ }
+    if (view === 'suppliers') Suppliers.render();
     if (view === 'reports') Reports.render();
     if (view === 'settings') Settings.fill();
     if (view === 'sale') Sale.onShow();
@@ -207,6 +209,8 @@ var TITLES = {
     if (currentView === 'dayclosing') DayClosing.render();
     if (currentView === 'customers') Customers.render();
     if (currentView === 'customer' && Customers.refresh) Customers.refresh();
+    if (currentView === 'suppliers') Suppliers.render();
+    if (currentView === 'supplier') Suppliers.refresh();
     if (currentView === 'reports') Reports.render();
     if (currentView === 'settings') Settings.fill();
   }
@@ -354,7 +358,7 @@ var TITLES = {
         requireOwner(function () { applyLock(); refreshAll(); });
       }
     };
-    Dashboard.bind(); Stock.bind(); Sale.bind(); Sales.bind(); Collections.bind(); DueList.bind(); DayClosing.bind(); Customers.bind();
+    Dashboard.bind(); Stock.bind(); Sale.bind(); Sales.bind(); Collections.bind(); DueList.bind(); DayClosing.bind(); Customers.bind(); Suppliers.bind();
     Reports.bind(); Settings.bind();
     bindLogin(); bindSetup();
     if (window.Lang) { Lang.bind(); }
