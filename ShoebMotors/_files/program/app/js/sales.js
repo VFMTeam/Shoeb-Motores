@@ -38,6 +38,43 @@ var Sales = (function () {
     return list;
   }
 
+  /* প্রতিটি ইনভয়েসের সব কাজ একটি বোতামে — চাপলে ছোট মেনু খোলে। */
+  function actions(id) {
+    var s = DB.saleById(id);
+    if (!s) return;
+    var items = [
+      { key: 'a4', label: 'ইনভয়েস দেখুন (A4)', cls: 'primary' },
+      { key: 'a5', label: 'A5 ইনভয়েস' },
+      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট (80mm)' },
+      { key: 'wa', label: 'বিল পাঠান' }
+    ];
+    if (s.collectionTracking === true && F.num(s.due) > 0.009) items.push({ key: 'collect', label: '＋ ক্যাশ' });
+    if (DB.saleHasPending(s)) items.push({ key: 'price', label: 'দাম বসান' });
+    items.push({ key: 'del', label: '🗑 ইনভয়েস মুছে ফেলুন', cls: 'danger' });
+    UI.modal({
+      title: 'ইনভয়েস ' + s.invoiceNo,
+      body: '<div class="inv-actions-menu">' + items.map(function (x) {
+        return '<button type="button" class="btn ' + (x.cls || '') + '" data-act="' + x.key + '">' + x.label + '</button>';
+      }).join('') + '</div>',
+      buttons: [],
+      onOpen: function (root) {
+        root.querySelectorAll('[data-act]').forEach(function (b) {
+          b.onclick = function () {
+            var k = b.getAttribute('data-act');
+            UI.closeModal();
+            if (k === 'a4') UI.openInvoice(id);
+            else if (k === 'a5') UI.openInvoice(id, 'a5');
+            else if (k === 'thermal') UI.printInvoice(DB.saleById(id), '80');
+            else if (k === 'wa') whatsapp(DB.saleById(id));
+            else if (k === 'collect') Collections.open(id);
+            else if (k === 'price') setPrices(id);
+            else if (k === 'del') remove(id);
+          };
+        });
+      }
+    });
+  }
+
   function render() {
     var list = filtered();
     lastFiltered = list;
@@ -84,13 +121,7 @@ var Sales = (function () {
         '<td class="num"><b>' + F.money(s.total) + '</b>' + (F.num(s.discount) > 0 ? '<div class="cell-sub">ছাড় ' + F.money(s.discount) + '</div>' : '') + '</td>' +
         '<td class="num">' + (DB.saleHasPending(s) ? '<span class="tag warn">দর বসান</span>' : '<span class="tag ok">সম্পূর্ণ</span>') + '</td>' +
         '<td><div class="row-actions">' +
-        '<button class="btn small" data-view="' + s.id + '">ইনভয়েস</button>' +
-        (s.collectionTracking === true && F.num(s.due) > 0.009 ? '<button class="btn small primary" data-collect="' + s.id + '">＋ ক্যাশ</button>' : '') +
-        (DB.saleHasPending(s) ? '<button class="btn small" data-price="' + s.id + '">দাম বসান</button>' : '') +
-        '<button class="btn small ghost" data-wa="' + s.id + '" title="কাস্টমারকে হোয়াটসঅ্যাপে বিলের হিসাব পাঠান">বিল পাঠান</button>' +
-        '<button class="btn small ghost" data-thermal="' + s.id + '" title="80mm থার্মাল রোলে ছাপুন">🧾</button>' +
-        '<button class="btn small ghost" data-a5="' + s.id + '" title="A5 কাগজে ছাপুন">A5</button>' +
-        '<button class="btn small ghost" data-del="' + s.id + '" title="ইনভয়েস মুছে ফেলুন">🗑</button>' +
+        '<button class="btn small" data-actions="' + s.id + '">ইনভয়েস ▾</button>' +
         '</div></td>' +
         '</tr>';
     }).join('') : UI.emptyRow(7, 'এই ফিল্টারে কোনো ইনভয়েস নেই।');
@@ -108,17 +139,7 @@ var Sales = (function () {
       if (next) next.onclick = function () { if (salesPage < totalPages) { salesPage++; render(); } };
     }
 
-    tb.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { UI.openInvoice(b.getAttribute('data-view')); }; });
-    tb.querySelectorAll('[data-collect]').forEach(function (b) { b.onclick = function () { Collections.open(b.getAttribute('data-collect')); }; });
-    tb.querySelectorAll('[data-wa]').forEach(function (b) { b.onclick = function () { whatsapp(DB.saleById(b.getAttribute('data-wa'))); }; });
-    tb.querySelectorAll('[data-thermal]').forEach(function (b) {
-      b.onclick = function () { UI.printInvoice(DB.saleById(b.getAttribute('data-thermal')), '80'); };
-    });
-    tb.querySelectorAll('[data-a5]').forEach(function (b) {
-      b.onclick = function () { UI.openInvoice(b.getAttribute('data-a5'), 'a5'); };
-    });
-    tb.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () { remove(b.getAttribute('data-del')); }; });
-    tb.querySelectorAll('[data-price]').forEach(function (b) { b.onclick = function () { setPrices(b.getAttribute('data-price')); }; });
+    tb.querySelectorAll('[data-actions]').forEach(function (b) { b.onclick = function () { actions(b.getAttribute('data-actions')); }; });
 
     var total = list.reduce(function (a, s) { return a + F.num(s.total); }, 0);
     var discount = list.reduce(function (a, s) { return a + F.num(s.discount); }, 0);

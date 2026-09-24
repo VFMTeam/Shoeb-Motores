@@ -2984,3 +2984,7 @@ html[data-theme="dark"] .modal .inv-note *{color:#fff !important;-webkit-text-fi
 
 /* কেনাকাটার হিসাবে "আগের বকেয়া" লেবেল: গোল কোণের চারকোনা বক্স, এক লাইনে */
 .opening-tag{border-radius:6px;white-space:nowrap}
+
+/* ইনভয়েস তালিকা: এক বোতামের মেনু */
+.inv-actions-menu{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.inv-actions-menu .btn{width:100%;justify-content:center;white-space:normal}
