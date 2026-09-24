@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-theme-choice="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>সোয়েব মটরস — দোকান পরিচালনা</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<meta name="theme-color" content="#f5f6f7">
+<meta name="color-scheme" content="dark light">
+<script>
+/* Apply saved/System appearance before CSS paints: no flash, no polling. */
+(function(){
+  var key='shoebMotorsThemeV2', c='system';
+  try { c=localStorage.getItem(key)||'system'; } catch(e) {}
+  if(c!=='dark'&&c!=='light'&&c!=='system') c='system';
+  var dark=false;
+  try { dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches); } catch(e) {}
+  var r=c==='system'?(dark?'dark':'light'):c;
+  document.documentElement.setAttribute('data-theme',r);
+  document.documentElement.setAttribute('data-theme-choice',c);
+  var m=document.querySelector('meta[name="theme-color"]');
+  if(m)m.setAttribute('content',r==='dark'?'#090e14':'#f5f6f7');
+})();
+</script>
+<link rel="stylesheet" href="css/style.css?v=20260924-stock-layout">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+<!-- ============ TOP BAR (সংকীর্ণ — সাইডবারের সাথে কাজ করে) ============ -->
+<header class="topbar" id="topbar" hidden>
+  <div class="topbar-page" id="topbarPage">হোম</div>
+  <div class="top-right">
+    <span class="cloud-pill ok" id="cloudPill" hidden></span>
+    <span class="save-pill" id="savePill" hidden></span>
+  </div>
+</header>
+
+<!-- ============ APP SHELL + SIDEBAR ============
+     topbar ও main#appMain কে JavaScript (app.js) এখানে ঢুকিয়ে দেয়।
+     লগইন ও সেটআপ পর্দা এই শেলের বাইরে থাকে — তাই লগইনে গেলে সাইডবার দেখা যায় না। -->
+<div class="app-shell" id="appShell" hidden>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <img id="brandLogo" class="brand-logo" src="img/logo.png" alt="logo">
+      <div>
+        <div class="brand-name" id="brandName">Shoeb Motors &amp; Tyre House</div>
+        <div class="brand-sub" id="brandSub">দোকান পরিচালনা</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebarNav">
+      <button class="nav-btn active" data-view="dashboard">🏠 <span>হোম</span></button>
+      <button class="nav-btn nav-sale" data-view="sale">➕ <span>নতুন বিক্রি</span></button>
+      <button class="nav-btn" data-view="stock">📦 <span>স্টক</span></button>
+      <button class="nav-btn" data-view="sales">🧾 <span>ইনভয়েস</span></button>
+      <button class="nav-btn" data-view="collections">💰 <span>ক্যাশ কালেকশন</span></button>
+      <button class="nav-btn" data-view="due">📋 <span>বাকি তালিকা</span></button>
+      <button class="nav-btn" data-view="customers">👤 <span>কাস্টমার</span></button>
+
+      <div class="nav-sep"><span>প্রশাসন</span></div>
+
+      <button class="nav-btn owner-only" data-view="dayclosing">🌙 <span>দিনের হিসাব বন্ধ</span></button>
+      <button class="nav-btn owner-only" data-view="reports">📈 <span>রিপোর্ট</span></button>
+      <button class="nav-btn" data-view="settings">⚙️ <span>সেটিংস</span></button>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="sidebar-actions">
+        <button class="btn ghost small" id="themeBtn" title="Switch theme">☀️</button>
+        <button class="btn ghost small lang-btn" id="langBtn" title="Language: switch to English">English</button>
+        <button class="btn ghost small" id="lockBtn" title="Lock app — অ্যাপ লক করুন">🔒 লক</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ============ LOGIN ============ -->
+<section class="view login-view" id="view-login">
+  <div class="login-card">
+    <img id="loginLogo" class="login-logo-img" src="img/logo.png" alt="Shoeb Motors &amp; Tyre House">
+    <h1 id="loginShopName">Shoeb Motors &amp; Tyre House</h1>
+    <p class="muted small" id="loginAddress" style="margin:0 0 2px">কালীগঞ্জ, ঝিনাইদহ</p>
+    <p class="muted small" id="loginPhone" style="margin:0">মোবাইল: ০১৭১১-৭২৮৯৭৫, ০১৭১২-২৮১৭৭২</p>
+    <input type="password" id="pinInput" class="pin-input" inputmode="numeric" autocomplete="off">
+    <div class="login-actions" id="loginActions">
+      <button class="btn primary big" id="pinLoginBtn">খুলুন</button>
+      <button class="btn ghost" id="setPinFirstBtn" hidden>পিন তৈরি করুন</button>
+    </div>
+    <p class="err" id="pinError"></p>
+    <div class="login-footer">
+      <span id="modeTag" class="tag" hidden></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SETUP WIZARD ============ -->
+<section class="view" id="view-setup" hidden>
+  <div class="setup-wrap">
+    <h1>স্বাগতম — দোকানের তথ্য দিয়ে শুরু করুন</h1>
+    
+    <div class="card">
+      <h3>১. দোকানের তথ্য</h3>
+      <div class="grid2">
+        <label>দোকানের নাম (ইংরেজি)<input id="setupShopName"></label>
+        <label>দোকানের নাম (বাংলা)<input id="setupShopNameBn"></label>
+        <label>ইনভয়েসের উপরের লেখা<input id="setupShopTag"></label>
+        <label>ঠিকানা<input id="setupAddress"></label>
+        <label>মোবাইল নম্বর (একাধিক হলে কমা দিয়ে)<input id="setupPhone"></label>
+        <label>ইনভয়েস নম্বরের শুরু<input id="setupPrefix" maxlength="5"></label>
+        <label>মুদ্রা প্রতীক<input id="setupCurrency" maxlength="3"></label>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h3>২. সিকিউরিটি পিন</h3>
+      <div class="grid2">
+        <label>মালিকের পিন (৪–৬ সংখ্যা)<input id="setupPin" type="password" inputmode="numeric" maxlength="6"></label>
+        <label>আবার পিন লিখুন<input id="setupPin2" type="password" inputmode="numeric" maxlength="6"></label>
+      </div>
+
+    </div>
+
+    <p class="err" id="setupError"></p>
+    <button class="btn primary big" id="finishSetupBtn">সেটআপ শেষ করে দোকান খুলুন</button>
+  </div>
+</section>
+
+<!-- ============ APP VIEWS ============ -->
+<main id="appMain" hidden>
+
+  <!-- ---------- DASHBOARD ---------- -->
+  <section class="view" id="view-dashboard">
+    <div class="dashboard-hero">
+      <div>
+        <span class="eyebrow">দোকানের কাজের জায়গা</span>
+        <h1>সোয়েব মটরস এন্ড টায়ার হাউস</h1>
+        <p class="muted small" id="dashDate"></p>
+      </div>
+    </div>
+
+    <div class="core-actions">
+      <button class="core-action core-sale" data-jump="sale">
+        <span class="core-icon">＋</span><span><b>নতুন বিক্রি</b></span><span class="core-arrow">→</span>
+      </button>
+      <button class="core-action" id="dashQuickAddStock">
+        <span class="core-icon">▣</span><span><b>স্টক যোগ</b></span><span class="core-arrow">→</span>
+      </button>
+      <button class="core-action" data-jump="collections">
+        <span class="core-icon">৳</span><span><b>ক্যাশ কালেকশন</b></span><span class="core-arrow">→</span>
+      </button>
+      <button class="core-action" data-jump="sales">
+        <span class="core-icon">▤</span><span><b>ইনভয়েস দেখুন</b></span><span class="core-arrow">→</span>
+      </button>
+    </div>
+
+    <div class="kpis kpis-clean">
+      <div class="kpi"><span class="kpi-label">আজকের বিক্রি</span><span class="kpi-value" id="kpiTodaySales">—</span><span class="kpi-sub" id="kpiTodayCount">—</span></div>
+      <div class="kpi owner-only profit-report-only" hidden><span class="kpi-label">আজকের লাভ</span><span class="kpi-value" id="kpiTodayProfit">—</span><span class="kpi-sub" id="kpiTodayMargin">—</span></div>
+      <div class="kpi"><span class="kpi-label">এই মাসের ইনভয়েস</span><span class="kpi-value" id="kpiMonthInv">—</span><span class="kpi-sub" id="kpiMonthInvSub">—</span></div>
+      <div class="kpi"><span class="kpi-label">কম স্টক</span><span class="kpi-value" id="kpiLow">—</span><span class="kpi-sub" id="kpiLowSub">—</span></div>
+    </div>
+
+    <div class="dashboard-alerts">
+      <div class="low-stock-banner due-reminder-banner" id="dueReminderBanner" hidden></div>
+      <div class="low-stock-banner" id="lowStockBanner" hidden></div>
+    </div>
+
+    <div class="card collection-overview clean-card dash-summary-card" id="dashCollectionCard">
+      <div class="card-head dash-summary-head"><h3>আজকের ক্যাশ অবস্থা</h3><button class="link-btn" data-jump="collections">ক্যাশ যোগ করুন →</button></div>
+      <div class="month-line dash-stat-grid">
+        <div class="dash-stat"><span class="m-lab">আজ কালেকশন</span><b class="m-val" id="kpiTodayCash"></b></div>
+        <div class="dash-stat"><span class="m-lab">সম্পূর্ণ</span><b class="m-val" id="kpiPaidCount"></b></div>
+        <div class="dash-stat"><span class="m-lab">আংশিক / খোলা</span><b class="m-val" id="kpiOpenCount"></b></div>
+        <div class="dash-stat"><span class="m-lab">দর অপেক্ষমাণ</span><b class="m-val" id="kpiPendingPrice"></b></div>
+      </div>
+    </div>
+
+    <div class="card month-card clean-card dash-summary-card">
+      <div class="card-head dash-summary-head"><h3>এই মাসের সংক্ষিপ্ত হিসাব</h3><button class="link-btn" data-jump="reports">বিস্তারিত →</button></div>
+      <div class="month-line dash-stat-grid dash-stat-grid-month">
+        <div class="dash-stat"><span class="m-lab">বিক্রি</span><b class="m-val" id="kpiMonthSales">—</b></div>
+        <div class="dash-stat owner-only profit-report-only" hidden><span class="m-lab">লাভ</span><b class="m-val" id="kpiMonthProfit">—</b></div>
+        <div class="dash-stat"><span class="m-lab">ইনভয়েস</span><b class="m-val" id="kpiMonthCount">—</b></div>
+        <div class="dash-stat owner-only"><span class="m-lab">স্টক মূল্য</span><b class="m-val" id="kpiStockValue">—</b></div>
+        <div class="dash-stat owner-only profit-report-only" hidden><span class="m-lab">প্রত্যাশিত লাভ</span><b class="m-val" id="kpiExpectedProfit">—</b></div>
+      </div>
+    </div>
+
+    <div id="dashTiles" hidden></div>
+  </section>
+
+  <!-- ---------- NEW SALE (POS) ---------- -->
+  <section class="view" id="view-sale" hidden>
+    <div class="page-head sale-page-head">
+      <div>
+        <span class="eyebrow">ADD SALE</span>
+        <h1>নতুন বিক্রি</h1>
+      </div>
+    </div>
+
+    <div class="pos-layout sale-workspace">
+      <div class="pos-left sale-main-column">
+        <div class="card sale-panel sale-customer-panel">
+          <div class="card-head sale-panel-head">
+            <div class="sale-step-title"><span class="sale-step-no">১</span><div><h3>কাস্টমার</h3></div></div>
+            <button class="btn ghost small" id="saleCustClear" aria-pressed="false">ওয়াক-ইন</button>
+          </div>
+          <div id="saleCustBox" class="cust-box" hidden></div>
+          <div id="newCustBox" class="newcust-box sale-new-customer">
+            <div class="newcust-title">নতুন কাস্টমার</div>
+            <div class="sale-customer-fields">
+              <label class="sale-field-name">নাম<input id="saleNewNameBn" autocomplete="off" lang="bn"></label>
+              <label>মোবাইল নম্বর<input id="saleNewPhone" inputmode="text" lang="bn" pattern="[0-9০-৯ +()-]*" maxlength="20" autocomplete="off"></label>
+              <label>ঠিকানা<input id="saleNewArea" autocomplete="off" lang="bn"></label>
+              <label><span id="saleVehicleLabel">গাড়ির নম্বর</span><input id="saleNewVehicle" autocomplete="off"></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="card sale-panel sale-product-panel">
+          <div class="card-head sale-panel-head">
+            <div class="sale-step-title"><span class="sale-step-no">২</span><div><h3>পণ্য নির্বাচন</h3></div></div>
+          </div>
+          <div class="sale-search-wrap">
+            <div class="sale-product-search-row">
+              <input id="saleProdSearch" class="sale-search-input" autocomplete="off">
+              <button class="btn ghost" id="saleProdClear">মুছুন</button>
+            </div>
+            <div id="saleProdResults" class="suggest sale-prod-suggest" hidden></div>
+          </div>
+        </div>
+
+        <div class="card sale-panel sale-cart-panel">
+          <div class="card-head sale-panel-head sale-cart-head">
+            <div class="sale-step-title"><span class="sale-step-no">৩</span><div><h3>পণ্য</h3></div></div>
+          </div>
+          <div class="sale-cart-scroll">
+            <table class="table" id="cartTable">
+              <thead><tr><th class="num" style="width:52px">ক্রম</th><th>বিবরণ</th><th>ব্র্যান্ড</th><th>সাইজ</th><th class="num" style="width:150px">পরিমাণ</th><th class="num">দর</th><th class="num">টাকা</th><th></th></tr></thead>
+              <tbody><tr class="empty-row"><td colspan="8"></td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="pos-right sale-summary-column">
+        <div class="card sticky sale-checkout-card">
+          <div class="card-head sale-summary-head">
+            <div class="sale-step-title"><span class="sale-step-no" id="saleInvoiceCountBadge">০</span><div><h3>মোট ও ইনভয়েস</h3></div></div>
+            <span class="pill" id="billDate"></span>
+          </div>
+
+          <div class="sale-bill-breakdown">
+            <div class="sale-bill-line"><span>আইটেম</span><strong id="billCount"></strong></div>
+            <div class="sale-bill-line"><span>উপমোট</span><strong id="billSub">—</strong></div>
+          </div>
+
+          <div class="sale-discount-box">
+            <label for="billDiscount">ছাড় দিন (৳)</label>
+            <div class="sale-money-input"><span>৳</span><input id="billDiscount" class="disc-input" type="text" inputmode="decimal" autocomplete="off"></div>
+            <div class="sale-discount-reason" id="discReasonRow" hidden>
+              <label for="billDiscountReason">ছাড়ের কারণ</label>
+              <input id="billDiscountReason" class="disc-reason" autocomplete="off">
+            </div>
+            <div class="sale-discount-reason" id="showDiscountRow" hidden>
+              <label class="inline-check"><input type="checkbox" id="saleShowDiscount"> ইনভয়েসে ছাড় দেখান</label>
+            </div>
+          </div>
+
+          <div class="sale-grand-total">
+            <span>সর্বমোট</span>
+            <strong id="billTotal">—</strong>
+          </div>
+
+
+          <div class="sale-discount-box">
+            <label for="saleReferenceMode">রেফারেন্স</label>
+            <select id="saleReferenceMode">
+              <option value="none">রেফারেন্স নাই</option>
+              <option value="reference">রেফারেন্স</option>
+            </select>
+            <div id="saleReferenceFields" hidden style="margin-top:10px">
+              <label>রেফারেন্স নাম<input id="saleReferenceName" autocomplete="off"></label>
+              <label>রেফারেন্স নম্বর<input id="saleReferencePhone" inputmode="text" autocomplete="off"></label>
+              <label>রেফারেন্স ঠিকানা<input id="saleReferenceAddress" autocomplete="off"></label>
+            </div>
+          </div>
+
+          <div class="sale-profit-line owner-only profit-report-only" hidden><span>সম্ভাব্য লাভ</span><strong id="billProfit">—</strong></div>
+          <div class="due-line warnline" id="billPendHint" hidden></div>
+          <p class="err" id="saleError"></p>
+          <button class="btn primary big full sale-invoice-btn" id="saveSaleBtn">ইনভয়েস তৈরি করুন</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+  <!-- ---------- STOCK ---------- -->
+  <section class="view" id="view-stock" hidden>
+    <div class="page-head">
+      <div><span class="eyebrow">INVENTORY</span><h1>স্টক</h1></div>
+      <div class="row">
+        <button class="btn primary" id="quickAddStockPage">＋ স্টক যোগ</button>
+        <button class="btn ghost" id="addTyreBtn">＋ নতুন পণ্য</button>
+        <button class="btn ghost" id="stockShareBtn">Stock Share</button>
+        <button class="btn ghost" id="detailStockBtn">Detail Stock</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row wrap filters">
+        <input id="stockSearch" class="grow" autocomplete="off">
+        <label class="inline-check"><input type="checkbox" id="stockLowOnly"> শুধু কম স্টক</label>
+        <select id="stockSort">
+          <option value="size">সাজান: মোটা সাইজ আগে</option>
+          <option value="qtyHigh">সাজান: বেশি স্টক</option>
+          <option value="qtyLow">সাজান: কম স্টক</option>
+          <option value="new">সাজান: নতুন যোগ করা</option>
+          <option value="value">সাজান: স্টকের মূল্য</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="stockTable">
+          <thead><tr>
+            <th class="st-name">ব্র্যান্ড</th><th class="st-size">সাইজ</th><th class="st-model">মডেল</th>
+            <th class="num st-qty">পরিমাণ</th><th class="num owner-only st-buy">ক্রয়মূল্য</th><th class="num st-sell">বিক্রয়মূল্য</th>
+            <th class="num owner-only st-val">স্টকের মূল্য</th><th class="st-act"></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="list-pager" id="stockPager" hidden></div>
+    </div>
+  </section>
+
+  <!-- ---------- DETAIL STOCK ---------- -->
+  <section class="view" id="view-detailstock" hidden>
+    <div class="page-head">
+      <div><span class="eyebrow">INVENTORY</span><h1>Detail Stock</h1></div>
+      <div class="row"><button class="btn ghost" id="detailStockBackBtn">← স্টক</button></div>
+    </div>
+
+    <div class="card detail-stock-card">
+      <div class="table-scroll">
+        <table class="table" id="detailStockTable">
+          <thead><tr><th>ক্যাটাগরি</th><th class="num">আলাদা পণ্য</th><th>মোট স্টক</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- SALES LIST ---------- -->
+  <section class="view" id="view-sales" hidden>
+    <div class="page-head">
+      <div><span class="eyebrow">INVOICES</span><h1>বিক্রি ও ইনভয়েস</h1></div>
+      <div class="row"><button class="btn primary" data-jump="sale">＋ নতুন বিক্রি</button><button class="btn ghost" id="exportSalesBtn">CSV এক্সপোর্ট</button></div>
+    </div>
+
+    <div class="card">
+      <div class="row wrap filters">
+        <input id="salesSearch" class="grow">
+        <label class="filter-label">একদিন<input type="date" id="salesDay"></label>
+        <select id="salesQuick" title="দিন / সপ্তাহ / মাস অনুযায়ী দেখুন">
+          <option value="">সব সময়</option>
+          <option value="today">আজ</option>
+          <option value="week">শেষ ৭ দিন</option>
+          <option value="month">এই মাস</option>
+        </select>
+        <details class="advanced-filter"><summary>আরও তারিখ</summary><div class="row"><input type="date" id="salesFrom"><span>—</span><input type="date" id="salesTo"></div></details>
+        <button class="btn ghost small" id="salesClearFilters">রিসেট</button>
+      </div>
+      <div class="invoice-range-summary" id="salesRangeSummary"></div>
+      <div class="row wrap totals" id="salesTotals"></div>
+      <div class="day-counts" id="salesDayBreakdown"></div>
+      <div class="table-scroll">
+        <table class="table" id="salesTable">
+          <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>ক্রেতা</th><th>আইটেম</th><th class="num">মোট</th><th class="num">দর</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="list-pager" id="salesPager" hidden></div>
+    </div>
+  </section>
+
+  <!-- ---------- CASH COLLECTION ---------- -->
+  <section class="view" id="view-collections" hidden>
+    <div class="page-head">
+      <div><h1>ক্যাশ কালেকশন</h1></div>
+      <div class="row"><button class="btn ghost" id="collectionTodayBtn">আজ</button><button class="btn ghost" id="collectionAllDueBtn">সব Due</button></div>
+    </div>
+
+    <div class="collection-kpis" id="collectionKpis"></div>
+
+    <div class="card">
+      <div class="row wrap filters">
+        <input id="collectionSearch" class="grow">
+        <label class="filter-label">শুরু<input type="date" id="collectionStart"></label>
+        <label class="filter-label">শেষ<input type="date" id="collectionEnd"></label>
+        <label class="filter-label">তারিখ<input type="date" id="collectionDay"></label>
+        <select id="collectionScope">
+          <option value="day">নির্বাচিত দিনের ইনভয়েস</option>
+          <option value="range">তারিখ পরিসীমা</option>
+          <option value="due">যেসব ইনভয়েসে Due আছে</option>
+          <option value="all">সব ট্র্যাক করা ইনভয়েস</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="collectionTable">
+          <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>ক্রেতা</th><th class="num">মোট</th><th class="num">কালেকশন</th><th class="num">Due</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>কালেকশন হিস্ট্রি</h3></div>
+      <div class="table-scroll">
+        <table class="table compact" id="collectionHistoryTable">
+          <thead><tr><th>সময়</th><th>ইনভয়েস</th><th>ক্রেতা</th><th class="num">টাকা</th><th>নোট</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- DUE LIST (LOCAL ONLY) ---------- -->
+  <section class="view" id="view-due" hidden>
+    <div class="page-head">
+      <div><h1>বাকি তালিকা</h1></div>
+      <div class="row"><button class="btn ghost" id="dueOpenCollections">ক্যাশ কালেকশন →</button></div>
+    </div>
+    <div class="due-kpis" id="dueKpis"></div>
+    <div class="card">
+      <div class="row wrap filters">
+        <input id="dueSearch" class="grow" autocomplete="off">
+        <select id="dueSort">
+          <option value="due">সাজান: বেশি বাকি আগে</option>
+          <option value="oldest">সাজান: পুরনো বাকি আগে</option>
+          <option value="recent">সাজান: সর্বশেষ ইনভয়েস</option>
+          <option value="name">সাজান: নাম</option>
+        </select>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="dueTable">
+          <thead><tr><th>কাস্টমার</th><th>মোবাইল</th><th>ঠিকানা</th><th class="num">বাকি ইনভয়েস</th><th class="num">মোট বাকি</th><th>রিমাইন্ডার</th><th>সর্বশেষ ইনভয়েস</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- DAY CLOSING ---------- -->
+  <section class="view" id="view-dayclosing" hidden>
+    <div class="page-head">
+      <div>
+        <h1>দিনের হিসাব বন্ধ</h1>
+      </div>
+      <div class="row">
+        <button class="btn ghost" id="closingTodayBtn">আজ</button>
+        <button class="btn ghost" data-jump="collections">💵 ক্যাশ কালেকশন</button>
+      </div>
+    </div>
+
+    <div class="card day-closing-toolbar">
+      <div class="row wrap">
+        <label class="filter-label">হিসাবের দিন<input type="date" id="closingDay"></label>
+        <div id="closingStatus" class="grow"></div>
+      </div>
+    </div>
+
+    <div class="collection-kpis" id="closingKpis"></div>
+
+    <div class="grid-2col day-closing-grid">
+      <div class="card">
+        <div class="card-head"><h3>দিনের সারাংশ</h3></div>
+        <div class="closing-breakdown" id="closingBreakdown"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>ক্যাশ মিলান</h3></div>
+
+        <label>দিনের খরচ (৳)
+          <input id="closingExpense" type="number" min="0" step="0.01" inputmode="decimal">
+        </label>
+        <div class="closing-adjusted-cash" style="margin-top:8px">
+          <span>খরচ বাদে হাতে থাকার কথা</span><b id="closingAdjustedCash">৳ 0</b>
+        </div>
+        <label style="margin-top:12px">হাতে গোনা ক্যাশ
+          <input id="closingActualCash" type="number" min="0" step="0.01" inputmode="decimal">
+        </label>
+        <div class="row wrap" style="margin-top:8px">
+          <span id="closingDifference" class="closing-difference"></span>
+        </div>
+        <label style="margin-top:12px">সমাপনী নোট
+          <textarea id="closingNote" rows="2"></textarea>
+        </label>
+        <div class="row wrap" style="margin-top:14px">
+          <button class="btn primary" id="saveClosingBtn">✓ দিনের হিসাব সেভ করুন</button>
+          <span class="tiny muted" id="closingSavedAt"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>দিনের হিসাব বন্ধের ইতিহাস</h3></div>
+      <div class="table-scroll">
+        <table class="table compact" id="closingHistoryTable">
+          <thead><tr><th>তারিখ</th><th class="num">ইনভয়েস</th><th class="num">বিক্রি</th><th class="num">প্রত্যাশিত ক্যাশ</th><th class="num">দিনের খরচ</th><th class="num">খরচ বাদে</th><th class="num">প্রকৃত ক্যাশ</th><th class="num">কম / বেশি</th><th>নোট</th><th>অবস্থা</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- CUSTOMERS ---------- -->
+  <section class="view" id="view-customers" hidden>
+    <div class="page-head">
+      <div><h1>কাস্টমার</h1></div>
+      <div class="row">
+        <button class="btn primary" id="addCustomerBtn">＋ নতুন কাস্টমার</button>
+        <button class="btn ghost" id="exportCustBtn">CSV এক্সপোর্ট</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row wrap filters">
+        <input id="custSearch" class="grow" autocomplete="off">
+        <select id="custSort"><option value="name">সাজান: নাম</option><option value="spend">সাজান: বেশি কেনা</option><option value="new">সাজান: নতুন</option></select>
+      </div>
+      <div class="table-scroll">
+        <table class="table" id="custTable">
+          <thead><tr><th>নাম</th><th>মোবাইল</th><th>গাড়ি</th><th class="num">বিক্রি</th><th class="num">মোট কেনা</th><th>শেষ এসেছেন</th><th>কাজ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="list-pager" id="custPager" hidden></div>
+      <p class="tiny muted" id="custSummary"></p>
+    </div>
+  </section>
+
+  <!-- ---------- CUSTOMER PROFILE ---------- -->
+  <section class="view" id="view-customer" hidden>
+    <div class="page-head">
+      <div class="row">
+        <button class="btn ghost small" id="custProfileBack">← ফিরে যান</button>
+        <div><h1 id="cpName">কাস্টমার</h1><p class="muted small" id="cpMeta"></p></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="cpOpeningBtn">আগের বকেয়া যোগ / সংশোধন</button>
+        <button class="btn" id="cpOpeningCollectBtn">আগের বকেয়া আদায়</button>
+        <button class="btn" id="cpEditBtn">তথ্য বদলান</button>
+        <button class="btn ghost" id="cpAddVehicleBtn">＋ গাড়ি যোগ করুন</button>
+        <button class="btn primary" id="cpNewSaleBtn">＋ নতুন বিক্রি</button>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <div class="card">
+        <div class="card-head"><h3>তথ্য</h3></div>
+        <table class="table compact" id="cpDetails"></table>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>গাড়ি</h3></div>
+        <table class="table" id="cpVehicles">
+          <thead><tr><th>গাড়ির নম্বর</th><th>মডেল</th><th>টায়ারের সাইজ</th><th>নোট</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>কেনাকাটার হিসাব</h3><span class="tag" id="cpTotals"></span></div>
+      <table class="table" id="cpSales">
+        <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>আইটেম</th><th class="num">মূল বিল</th><th class="num">ছাড়</th><th class="num">চূড়ান্ত বিল</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ---------- REPORTS ---------- -->
+  <section class="view owner-section" id="view-reports" hidden>
+    <div class="page-head">
+      <div><h1>রিপোর্ট</h1></div>
+      <div class="row report-range-tools">
+        <select id="repQuickRange" aria-label="দ্রুত সময়সীমা">
+          <option value="">দ্রুত সময়সীমা</option>
+          <option value="today">আজ</option>
+          <option value="week">৭ দিন</option>
+          <option value="month">এই মাস</option>
+          <option value="year">এই বছর</option>
+        </select>
+        <input type="date" id="repFrom" aria-label="শুরুর তারিখ">
+        <span class="report-range-sep">—</span>
+        <input type="date" id="repTo" aria-label="শেষ তারিখ">
+        <button class="btn primary small" id="repApplyBtn">প্রয়োগ</button>
+        <button class="btn ghost small" id="repPrintBtn">🖨 রিপোর্ট</button>
+        <button class="btn primary small" id="repPdfBtn">⬇ PDF</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="repKpis"></div>
+
+    <div class="row report-current-facts muted small" id="repCurrentFacts"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3 id="anaChartTitle">বিক্রি — শেষ ১ মাস</h3>
+        <div class="row chart-head-actions">
+          <select id="anaChartRange" class="chart-range-select" aria-label="চার্টের সময়সীমা">
+            <option value="1">১ দিন</option>
+            <option value="7">৭ দিন</option>
+            <option value="14">১৪ দিন</option>
+            <option value="30" selected>১ মাস</option>
+          </select>
+          <div class="legend"><span class="dot blue"></span>বিক্রি</div>
+        </div>
+      </div>
+      <div id="dashChartInfo" class="chart-info" hidden></div>
+      <div id="dashChart" class="chart interactive-chart chart-range-30"></div>
+    </div>
+
+    <div class="report-cards-flow">
+      <div class="card">
+        <div class="card-head"><h3>লাভ-ক্ষতির হিসাব</h3></div>
+        <table class="table" id="repPL"></table>
+      </div>
+
+      <div class="card" id="repTopCustomersCard">
+        <div class="card-head">
+          <h3 id="repTopCustomersTitle">শীর্ষ ১০ কাস্টমার</h3>
+          <select id="repCustomerSort" aria-label="কাস্টমার সাজান">
+            <option value="amount" selected>বেশি টাকা</option>
+            <option value="qty">বেশি পণ্য</option>
+          </select>
+        </div>
+        <div class="table-scroll"><table class="table compact" id="repTopCustomers"></table></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>দিন অনুযায়ী বিক্রি</h3></div>
+        <div class="table-scroll"><table class="table compact" id="repDaily"></table></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>পণ্য অনুযায়ী বিক্রি</h3>
+          <select id="repProductSort" aria-label="পণ্য সাজান">
+            <option value="rev" selected>বেশি বিক্রয়মূল্য</option>
+            <option value="profit">বেশি লাভ</option>
+            <option value="qty">বেশি পরিমাণ</option>
+          </select>
+        </div>
+        <div class="table-scroll"><table class="table compact" id="repByProduct"></table></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ---------- SETTINGS ---------- -->
+  <section class="view" id="view-settings" hidden>
+    <div class="page-head"><div><h1>সেটিংস</h1></div></div>
+
+    <div class="settings-layout">
+      <div class="card settings-card settings-invoice">
+        <div class="card-head"><h3>ইনভয়েস সেটিংস (ইনভয়েসে যা যা ছাপা হবে)</h3></div>
+        <div class="grid2">
+          <label>দোকানের নাম (ইংরেজি)<input id="setShopName"></label>
+          <label>দোকানের নাম (বাংলা)<input id="setShopNameBn"></label>
+          <label>ইনভয়েসের উপরের লেখা<input id="setShopTag"></label>
+          <label>ঠিকানা<input id="setAddress"></label>
+          <label>মোবাইল নম্বর (একাধিক হলে কমা দিয়ে লিখুন)<input id="setPhone"></label>
+          <label>মুদ্রা প্রতীক<input id="setCurrency" maxlength="3"></label>
+          <label>ইনভয়েস নম্বরের শুরু<input id="setPrefix" maxlength="5"></label>
+          <label>ছাড়ের নোট<input id="setDiscountNote"></label>
+        </div>
+        <p class="tiny muted">ইনভয়েসে ছাড় দেখানো হবে কিনা তা এখন প্রতিটি বিক্রয়ের সময় নতুন বিল (Sale) পাতা থেকে আলাদাভাবে ঠিক করা যায় — সেটিংসের এই সুইচ আর প্রযোজ্য নয়।</p>
+        <div class="logo-row">
+          <img id="setLogoPreview" class="logo-prev" src="img/logo.png" alt="">
+          <div class="logo-side">
+            <button class="btn ghost small" id="setLogoPick" type="button">🖼️ লোগো বদলান</button>
+            <button class="btn ghost small" id="setLogoClear" type="button">আগের লোগো</button>
+            <input type="file" id="setLogoFile" accept="image/png,image/jpeg" hidden>
+          </div>
+        </div>
+        <div class="grid2">
+          <label>ফেরত সংক্রান্ত নোট<input id="setReturnNote"></label>
+        </div>
+        <label class="field">ইনভয়েসের নিচের লেখা<textarea id="setFooter" rows="2"></textarea></label>
+        <label class="field">ধন্যবাদ বাক্য<textarea id="setThanks" rows="2"></textarea></label>
+        <div class="settings-actions"><button class="btn primary" id="saveSettingsBtn">সেটিংস সেভ করুন</button></div>
+      </div>
+
+      <div class="card settings-card settings-security">
+        <div class="card-head"><h3>নিরাপত্তা</h3></div>
+        <label class="field">এখনকার পিন<input id="curPin" type="password" inputmode="numeric" maxlength="6"></label>
+        <div class="grid2">
+          <label>নতুন পিন<input id="newPin" type="password" inputmode="numeric" maxlength="6"></label>
+          <label>নতুন পিন আবার লিখুন<input id="newPin2" type="password" inputmode="numeric" maxlength="6"></label>
+        </div>
+        <div class="settings-actions"><button class="btn" id="changePinBtn">পিন বদলান</button></div>
+      </div>
+
+      <div class="card settings-card settings-appearance">
+        <div class="card-head"><h3>দেখতে কেমন হবে / Appearance</h3></div>
+        <label>থিম
+          <select id="setTheme">
+            <option value="system">System</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card settings-card settings-language">
+        <div class="card-head"><h3>ভাষা / Language</h3></div>
+        <label>প্রোগ্রামের ভাষা
+          <select id="setLang">
+            <option value="bn">বাংলা</option>
+            <option value="en">English (ইংরেজি)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card settings-card settings-backup">
+        <div class="card-head"><h3>সেভ ও ব্যাকআপ</h3></div>
+        <table class="table compact" id="storageTable"></table>
+        <div class="row wrap settings-backup-actions">
+          <button class="btn" id="saveNowBtn">💾 এখনই সেভ করুন</button>
+          <button class="btn primary" id="syncNowBtn">☁ এখনই Online Backup</button>
+          <button class="btn ghost" id="onlineRestoreBtn">↩ Online Backup থেকে Restore</button>
+          <button class="btn ghost" id="downloadBackupBtn">⬇ ব্যাকআপ ফাইল নামান</button>
+          <button class="btn ghost" id="restoreBtn">⬆ ব্যাকআপ থেকে ফিরিয়ে আনুন</button>
+        </div>
+        <input type="file" id="restoreFile" accept=".json" hidden>
+        <p class="tiny muted" id="backupInfo"></p>
+      </div>
+
+      <div class="card settings-card settings-deleted owner-only">
+        <div class="card-head"><h3>মুছে ফেলা তথ্য</h3>
+          <button class="link-btn" id="delClearBtn">সব খালি করুন</button></div>
+        <div class="table-scroll">
+          <table class="table compact" id="delTable">
+            <thead><tr><th>ধরন</th><th>বিবরণ</th><th>তারিখ</th><th class="num">টাকা</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="tiny muted" id="delInfo"></p>
+      </div>
+
+      <div class="card settings-card settings-danger">
+        <div class="card-head"><h3>সতর্কতা</h3></div>
+        <div class="row wrap">
+          <button class="btn ghost" id="clearDataBtn">সব তথ্য মুছে ফেলুন</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" id="modalBox" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modalTitle"></h3>
+      <button class="icon-btn" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ============ PRINT AREA ============ -->
+<div id="printRoot" class="print-root"></div>
+
+<script src="js/store.js?v=1221-20260923"></script>
+<script src="js/cloud.js?v=1215-20260920"></script>
+<script src="js/theme.js?v=1215-20260920"></script>
+<script src="js/lang.js?v=1215-20260920"></script>
+<script src="js/format.js?v=1215-20260920"></script>
+<script src="js/ui.js?v=20260924-hide-discount2"></script>
+<script src="js/customers.js?v=20260924-no-note"></script>
+<script src="js/stock.js?v=20260924-stock-layout"></script>
+<script src="js/sale.js?v=20260924-walkin-cash"></script>
+<script src="js/sales.js?v=20260924-hide-discount"></script>
+<script src="js/collections.js?v=1221-20260923"></script>
+<script src="js/due.js?v=1221-20260923"></script>
+<script src="js/dayclosing.js?v=1221-20260923"></script>
+<script src="js/dashboard.js?v=1215-20260920"></script>
+<script src="js/reports.js?v=1215-20260920"></script>
+<script src="js/settings.js?v=1215-20260920"></script>
+<script src="js/app.js?v=1215-20260920"></script>
+<script>
+/* Local-server build: persistent PWA caching is intentionally disabled.
+   Older Shoeb Motors releases used cache-first service workers, which could mix
+   old HTML with new JavaScript after an upgrade. Remove those caches once the
+   current (versioned) page has loaded. Business data is never stored here. */
+(function () {
+  try {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (r) { return r.unregister(); }));
+      }).catch(function () {});
+    }
+    if (window.caches && caches.keys) {
+      caches.keys().then(function (keys) {
+        return Promise.all(keys.filter(function (k) { return /^shoeb-runtime-/i.test(k); }).map(function (k) { return caches.delete(k); }));
+      }).catch(function () {});
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

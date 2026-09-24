@@ -1,0 +1,26 @@
+{
+  "name": "Shoeb Motors — Shop Management",
+  "short_name": "Shoeb Motors",
+  "description": "Sales, profit, stock and invoice management",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090e14",
+  "theme_color": "#0b1118",
+  "lang": "bn",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
