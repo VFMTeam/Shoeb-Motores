@@ -107,10 +107,8 @@ var Dashboard = (function () {
     var mr = monthRange();
     var monthList = DB.salesInRange(mr.from, mr.to);
     var mSales = sum(monthList, function (s) { return s.total; });
-    var stockVal = DB.stockValue();
     setDashboardMoney('kpiMonthSales', mSales);
     document.getElementById('kpiMonthCount').textContent = monthList.length;
-    setDashboardMoney('kpiStockValue', stockVal);
     document.getElementById('kpiMonthInv').textContent = monthList.length;
     document.getElementById('kpiMonthInvSub').textContent = F.qty(pcs(monthList)) + ' পিস বিক্রি';
 
@@ -132,8 +130,8 @@ var Dashboard = (function () {
         value: invCount(monthList) + ' টি', sub: 'এই মাসের ইনভয়েস — যেকোনো বিল খুলে আবার ছাপতে পারবেন'
       },
       {
-        jump: 'stock', cls: 't-slate', label: 'স্টক ও মূল্য',
-        value: moneyWithHover(stockVal), sub: DB.state.products.length + ' ধরনের পণ্য · ' + F.qty(stockQty) + ' পিস' + (low.length ? ' · কম ' + low.length + ' টি' : '')
+        jump: 'stock', cls: 't-slate', label: 'স্টক',
+        value: DB.state.products.length + ' ধরনের পণ্য', sub: F.qty(stockQty) + ' পিস' + (low.length ? ' · কম ' + low.length + ' টি' : '')
       },
       {
         jump: 'dayclosing', cls: 't-ink owner-only', label: 'Day Closing',

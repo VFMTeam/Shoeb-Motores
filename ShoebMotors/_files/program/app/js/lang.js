@@ -124,7 +124,7 @@ var Lang = (function () {
     'এখন কত টাকা নিলেন': 'Amount received now', 'টাকার ধরন': 'Payment method',
     'এই বিক্রির পর বাকি': 'Due after this sale', 'স্টকে:': 'In stock:',
     'ফিটিং ফ্রি': 'Free fitting', 'নিয়মিত কাস্টমার': 'Regular customer', 'নিজের লেখা আইটেম (স্টকে নেই)': 'Custom item (not in stock)',
-    'কেনাকাটার হিসাব': 'Purchase history', 'জমা': 'Paid', 'বকেয়া জমা': 'Pay due', 'টায়ারের সাইজ': 'Tyre size', 'ফোন': 'Phone',
+    'কেনাকাটার হিসাব': 'Purchase history', 'পণ্য নির্বাচন': 'Select product', 'বেশি বিক্রয়মূল্য': 'Highest sales value', 'বেশি লাভ': 'Highest profit', 'বেশি পরিমাণ': 'Highest quantity', 'মোট ও ইনভয়েস': 'Total & invoice', 'জমা': 'Paid', 'বকেয়া জমা': 'Pay due', 'টায়ারের সাইজ': 'Tyre size', 'ফোন': 'Phone',
     'মোট কেনা টাকা': 'Total purchased', 'বাকি আছে': 'Outstanding',
     'Address': 'Address', 'নাম (ইংরেজি)': 'Name (English)',
     /* ---------- সেটিংস ---------- */

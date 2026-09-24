@@ -18,11 +18,29 @@ var Reports = (function () {
   function renderCurrentFacts() {
     var box = document.getElementById('repCurrentFacts');
     if (!box) return;
-    var stockVal = DB.stockValue();
     box.innerHTML =
       '<span>' + tx('বর্তমান অবস্থা (তারিখ নির্বিশেষে)', 'Current status (regardless of date range)') + ':</span> ' +
-      '<span><b>' + tx('মোট কাস্টমার', 'Total customers') + '</b> ' + DB.state.customers.length + '</span>' +
-      ' · <span class="owner-only"><b>' + tx('স্টকের মূল্য (ক্রয়মূল্যে)', 'Stock value (at cost)') + '</b> ' + F.money(stockVal) + '</span>';
+      '<span><b>' + tx('মোট কাস্টমার', 'Total customers') + '</b> ' + DB.state.customers.length + '</span>';
+  }
+
+  /* স্টক মূল্য — ব্যবসার গোপন হিসাব, তাই ড্যাশবোর্ডে নয়, শুধু মালিকের রিপোর্টে।
+     টাইপ অনুযায়ী মোট পরিমাণ (যেমন টায়ার ৪০০ পিস · রশি ৩০০ কেজি) ও ক্রয়মূল্যে স্টকের দাম। */
+  function renderStockValue() {
+    var table = document.getElementById('repStock');
+    if (!table) return;
+    var list = Stock.typeSummary();
+    var totalEl = document.getElementById('repStockTotal');
+    if (totalEl) totalEl.textContent = tx('মোট', 'Total') + ': ' + F.money(DB.stockValue());
+    table.innerHTML =
+      '<thead><tr><th>' + tx('পণ্যের ধরন', 'Product type') + '</th><th class="num">' + tx('পণ্য', 'Products') + '</th><th>' + tx('মোট পরিমাণ', 'Total quantity') + '</th><th class="num">' + tx('মূল্য (ক্রয়মূল্যে)', 'Value (at cost)') + '</th></tr></thead><tbody>' +
+      (list.length ? list.map(function (g) {
+        return '<tr><td><b>' + F.esc(Stock.typeLabel(g.type)) + '</b></td>' +
+          '<td class="num">' + g.count + '</td>' +
+          '<td class="detail-stock-total">' + Stock.unitTotalsHtml(g) + '</td>' +
+          '<td class="num">' + F.money(g.value) + '</td></tr>';
+      }).join('') + '<tr class="total-row"><td colspan="3">' + tx('মোট স্টক মূল্য', 'Total stock value') + '</td><td class="num">' + F.money(DB.stockValue()) + '</td></tr>'
+        : '<tr class="empty-row"><td colspan="4">' + tx('এখনো কোনো স্টক নেই।', 'No stock yet.') + '</td></tr>') +
+      '</tbody>';
   }
 
   /* ইন্টার‌্যাক্টিভ বিক্রির চার্ট: ১ / ৭ / ১৪ / ৩০ দিন (আজ থেকে পিছনে — রিপোর্টের from/to রেঞ্জ থেকে আলাদা,
@@ -213,6 +231,7 @@ var Reports = (function () {
     var sales = DB.salesInRange(r.from, r.to);
 
     renderCurrentFacts();
+    renderStockValue();
     var chartRange = document.getElementById('anaChartRange');
     renderSalesChart(chartRange && chartRange.value ? Number(chartRange.value) : 30);
 

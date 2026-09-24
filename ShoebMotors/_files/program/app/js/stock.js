@@ -65,50 +65,55 @@ var Stock = (function () {
     return list;
   }
 
+  /* টাইপ অনুযায়ী স্টকের সারাংশ (যেমন টায়ার ৪০০ পিস, রশি ৩০০ কেজি) — ডিটেইল স্টক ও রিপোর্ট দুই জায়গাতেই ব্যবহার হয়। */
+  var UNIT_EN = { 'পিস':'pcs', 'কেজি':'kg', 'ফুট':'ft', 'লিটার':'litre' };
+  var TYPE_EN = {
+    'টায়ার':'Tyre', 'টিউব':'Tube', 'ব্যাটারি':'Battery', 'মোটর অয়েল':'Motor oil', 'মোটর পার্টস':'Motor parts',
+    'রশি':'Rope', 'টায়ার জেল':'Tyre gel', 'পলিথিন':'Polythene', 'পলি ত্রিপল':'Poly tarpaulin', 'রিম':'Rim', 'অন্যান্য':'Other'
+  };
+  function isEn() { return !!(window.Lang && Lang.isEn()); }
+  function unitLabel(u) { return isEn() ? (UNIT_EN[u] || u) : u; }
+  function typeLabel(t) { return isEn() ? (TYPE_EN[t] || t) : t; }
+  function typeSummary() {
+    var groups = {};
+    products().filter(function (p) { return p && p.active !== false; }).forEach(function (p) {
+      var type = productType(p);
+      var unit = String(p.unit || 'পিস').trim() || 'পিস';
+      if (!groups[type]) groups[type] = { type: type, count: 0, units: {}, value: 0 };
+      groups[type].count++;
+      groups[type].units[unit] = F.num(groups[type].units[unit]) + F.num(p.qty);
+      groups[type].value += F.num(p.qty) * F.num(p.buyPrice);
+    });
+    var known = TYPES.filter(function (t) { return groups[t]; });
+    Object.keys(groups).forEach(function (t) { if (known.indexOf(t) < 0) known.push(t); });
+    return known.map(function (t) { groups[t].value = DB.round2(groups[t].value); return groups[t]; });
+  }
+  function unitTotalsHtml(g) {
+    var units = Object.keys(g.units);
+    units.sort(function (a, b) {
+      var ai = UNITS.indexOf(a), bi = UNITS.indexOf(b);
+      if (ai < 0) ai = 999; if (bi < 0) bi = 999;
+      return ai - bi || a.localeCompare(b);
+    });
+    return units.map(function (u) {
+      return '<b>' + F.qty(g.units[u]) + '</b> ' + F.esc(unitLabel(u));
+    }).join(' <span class="detail-stock-sep">·</span> ');
+  }
+
   function renderDetailStock() {
     var body = document.querySelector('#detailStockTable tbody');
     if (!body) return;
-    var all = products().filter(function (p) { return p && p.active !== false; });
-    var en = window.Lang && Lang.isEn();
-    var groups = {};
-    all.forEach(function (p) {
-      var type = productType(p);
-      var unit = String(p.unit || 'পিস').trim() || 'পিস';
-      if (!groups[type]) groups[type] = { count: 0, units: {} };
-      groups[type].count++;
-      groups[type].units[unit] = F.num(groups[type].units[unit]) + F.num(p.qty);
-    });
+    var en = isEn();
+    var list = typeSummary();
 
-    var known = TYPES.filter(function (t) { return groups[t]; });
-    Object.keys(groups).forEach(function (t) { if (known.indexOf(t) < 0) known.push(t); });
-    var unitEn = { 'পিস':'pcs', 'কেজি':'kg', 'ফুট':'ft', 'লিটার':'litre' };
-    var typeEn = {
-      'টায়ার':'Tyre', 'টিউব':'Tube', 'ব্যাটারি':'Battery', 'মোটর অয়েল':'Motor oil', 'মোটর পার্টস':'Motor parts',
-      'রশি':'Rope', 'টায়ার জেল':'Tyre gel', 'পলিথিন':'Polythene', 'পলি ত্রিপল':'Poly tarpaulin', 'রিম':'Rim', 'অন্যান্য':'Other'
-    };
-    function unitLabel(u) { return en ? (unitEn[u] || u) : u; }
-    function typeLabel(t) { return en ? (typeEn[t] || t) : t; }
-    function totals(g) {
-      var units = Object.keys(g.units);
-      units.sort(function (a, b) {
-        var ai = UNITS.indexOf(a), bi = UNITS.indexOf(b);
-        if (ai < 0) ai = 999; if (bi < 0) bi = 999;
-        return ai - bi || a.localeCompare(b);
-      });
-      return units.map(function (u) {
-        return '<b>' + F.qty(g.units[u]) + '</b> ' + F.esc(unitLabel(u));
-      }).join(' <span class="detail-stock-sep">·</span> ');
-    }
-
-    if (!known.length) {
+    if (!list.length) {
       body.innerHTML = '<tr class="empty-row"><td colspan="3">' + (en ? 'No stock yet.' : 'এখনো কোনো স্টক নেই।') + '</td></tr>';
       return;
     }
-    body.innerHTML = known.map(function (t) {
-      var g = groups[t];
-      return '<tr><td><b>' + F.esc(typeLabel(t)) + '</b></td>' +
+    body.innerHTML = list.map(function (g) {
+      return '<tr><td><b>' + F.esc(typeLabel(g.type)) + '</b></td>' +
         '<td class="num mono">' + F.bn(g.count) + '</td>' +
-        '<td class="detail-stock-total">' + totals(g) + '</td></tr>';
+        '<td class="detail-stock-total">' + unitTotalsHtml(g) + '</td></tr>';
     }).join('');
   }
 
@@ -760,5 +765,5 @@ var Stock = (function () {
     Object.keys(NEW_EN).forEach(function (k) { if (!Lang.dict[k]) Lang.dict[k] = NEW_EN[k]; });   /* আগের অনুবাদ বদলায় না */
   }
 
-  return { render: render, renderDetailStock: renderDetailStock, form: form, quickAddStock: quickAddStock, addStockForm: addStockForm, details: details, bind: bind, exportCsv: exportCsv, printFullStock: printFullStock, downloadFullStockPdf: downloadFullStockPdf, shareFullStockPdf: shareFullStockPdf, fullStockPrintHtml: fullStockPrintHtml, label: label, search: search, real: real, typePicker: typePicker, cfgFor: cfgFor, autoDesc: autoDesc, productType: productType, NA: NA, VEHICLES: VEHICLES, TYPES: TYPES, UNITS: UNITS };
+  return { render: render, renderDetailStock: renderDetailStock, typeSummary: typeSummary, typeLabel: typeLabel, unitTotalsHtml: unitTotalsHtml, form: form, quickAddStock: quickAddStock, addStockForm: addStockForm, details: details, bind: bind, exportCsv: exportCsv, printFullStock: printFullStock, downloadFullStockPdf: downloadFullStockPdf, shareFullStockPdf: shareFullStockPdf, fullStockPrintHtml: fullStockPrintHtml, label: label, search: search, real: real, typePicker: typePicker, cfgFor: cfgFor, autoDesc: autoDesc, productType: productType, NA: NA, VEHICLES: VEHICLES, TYPES: TYPES, UNITS: UNITS };
 })();

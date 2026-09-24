@@ -145,7 +145,7 @@ tr.disc-hint-row td{padding-top:0}
 .row-actions{display:flex;gap:5px;justify-content:flex-end}
 .thumb{width:38px;height:38px;border-radius:9px;object-fit:cover;border:1px solid var(--line);background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:17px}
 .cell-main{font-weight:600}
-.cell-link{cursor:pointer;color:var(--accent)}
+.cell-link{cursor:pointer;color:var(--text)}
 .cell-link:hover{text-decoration:underline}
 .cell-sub{font-size:11.5px;color:var(--muted)}
 
