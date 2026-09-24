@@ -2976,3 +2976,8 @@ html[data-theme="dark"] .modal .inv-note *{color:#fff !important;-webkit-text-fi
   #stockTable .st-btns{justify-content:stretch;flex-wrap:nowrap}
   #stockTable .st-btns .btn{flex:1;padding:8px 10px;font-size:13px}
 }
+
+/* পাতার নামের আলাদা স্ট্রিপ আর নেই — উপরের নেভেই কোন পাতা খোলা তা বোঝা যায়।
+   স্ট্রিপটা শুধু তখনই দেখায় যখন সেভ/ক্লাউডের কোনো সতর্কবার্তা আছে। */
+#topbar{justify-content:flex-end}
+#topbar:not(:has(.save-pill:not([hidden]), .cloud-pill:not([hidden]))){display:none!important}
