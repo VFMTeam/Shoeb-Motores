@@ -265,6 +265,8 @@ var Customers = (function () {
       '<label>মোবাইল নম্বর<input id="cfPhone" value="' + F.esc(c ? c.phone : '') + '" inputmode="text" lang="bn" pattern="[0-9০-৯ +()-]*" maxlength="20"></label>' +
       '</div>' +
       '<label>ঠিকানা<input id="cfAddress" value="' + F.esc(c ? addressText(c) : '') + '"></label>' +
+      '<label>আগের বকেয়া (পুরোনো খাতার হিসাব, না থাকলে খালি রাখুন)<input id="cfOpening" inputmode="decimal" autocomplete="off" value="' + (c && F.num(c.openingBalance) ? F.esc(String(c.openingBalance)) : '') + '"></label>' +
+      (c && DB.openingPaid(c.id) > 0 ? '<p class="tiny muted">আগের বকেয়া থেকে ইতিমধ্যে জমা: ' + F.money(DB.openingPaid(c.id)) + '। এর চেয়ে কম লেখা যাবে না।</p>' : '') +
       '<div class="section-title">এই কাস্টমারের গাড়ি</div>' +
       '<div id="vehList">' + ((c && c.vehicles && c.vehicles.length) ? c.vehicles.map(vehicleRow).join('') : '') + '</div>' +
       '<button class="btn small ghost" type="button" id="addVehBtn">＋ গাড়ি যোগ করুন</button>' +
@@ -296,6 +298,10 @@ var Customers = (function () {
             });
 
             var addressBn = ''; // One address field; legacy values are combined before editing.
+            var openingRaw = document.getElementById('cfOpening').value.trim() || '0';
+            if (!isNew) {
+              try { DB.setOpeningBalance(c.id, openingRaw); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+            }
             if (isNew) {
               c = {
                 id: DB.uid('c'), name: '', nameBn: nameBn, addressBn: addressBn.trim(), phone: phone,
@@ -304,6 +310,7 @@ var Customers = (function () {
                 createdAt: new Date().toISOString(), vehicles: vehicles, payments: []
               };
               DB.state.customers.push(c);
+              try { DB.setOpeningBalance(c.id, openingRaw); } catch (err) { DB.state.customers.pop(); UI.toast(F.esc(err.message), 'bad'); return; }
               DB.nextNo('customer');
               UI.toast('কাস্টমার <b>' + F.esc(nameBn) + '</b> যোগ হয়েছে।', 'ok');
             } else {
@@ -379,9 +386,8 @@ var Customers = (function () {
       '<tr><td class="muted">সব মিলিয়ে টাকা</td><td><b>' + F.money(st.total) + '</b></td></tr>' +
       '<tr><td class="muted">মোট ছাড় দেওয়া হয়েছে</td><td>' + F.money(st.discount) + '</td></tr>' +
       '<tr><td class="muted">এখন পর্যন্ত জমা দিয়েছেন</td><td>' + F.money(st.paid) + '</td></tr>' +
-      '<tr><td class="muted">আগের বকেয়া (মোট)</td><td>' + F.money(c.openingBalance || 0) + '</td></tr>' +
-      '<tr><td class="muted">আগের বকেয়া থেকে জমা</td><td>' + F.money(DB.openingPaid(id)) + '</td></tr>' +
-      '<tr><td class="muted">আগের বকেয়া অবশিষ্ট</td><td><b>' + F.money(DB.openingDue(id)) + '</b></td></tr>' +
+      (F.num(c.openingBalance) > 0 ? '<tr><td class="muted">আগের বকেয়া</td><td>' + F.money(c.openingBalance) +
+        ' · জমা ' + F.money(DB.openingPaid(id)) + ' · বাকি <b>' + F.money(DB.openingDue(id)) + '</b></td></tr>' : '') +
       '<tr><td class="muted">মোট পাওনা (বর্তমান)</td><td><b>' + F.money(st.due) + '</b></td></tr>' +
       '<tr><td class="muted">শেষ এসেছেন</td><td>' + (st.last ? F.d(st.last) : '—') + '</td></tr>';
 
@@ -474,25 +480,6 @@ var Customers = (function () {
     }, 60);
   }
 
-  function openingBalanceForm(collect) {
-    var c = DB.customerById(currentId);
-    if (!c) return;
-    UI.modal({ title: collect ? 'আগের বকেয়া আদায়' : 'আগের বকেয়া যোগ / সংশোধন',
-      body: '<p>আগের মোট বকেয়া: <b>' + F.money(c.openingBalance || 0) + '</b> · জমা: ' + F.money(DB.openingPaid(c.id)) + ' · অবশিষ্ট: <b>' + F.money(DB.openingDue(c.id)) + '</b></p>' +
-        (collect ? '' : '<p class="tiny muted">পুরোনো হিসাব থেকে মোট কত টাকা পাওনা ছিল লিখুন। সংশোধন করলে আগের পরিমাণটি বদলাবে; আবার যোগ হবে না। ইনভয়েসে থাকা বাকি এখানে আবার লিখবেন না।</p>') +
-        '<label>' + (collect ? 'এখন জমা নিচ্ছেন' : 'আগের মোট বকেয়া') + '<input id="openingAmount" inputmode="decimal" value="' + (collect ? '' : F.esc(String(c.openingBalance || 0))) + '"></label>',
-      buttons: [{label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal},
-        {label: 'সেভ করুন', cls: 'primary', onClick: function () {
-          try {
-            var amount = document.getElementById('openingAmount').value;
-            if (collect) DB.collectOpeningBalance(c.id, amount);
-            else DB.setOpeningBalance(c.id, amount);
-          } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
-          UI.closeModal(); open(c.id); UI.toast('হিসাব সেভ হয়েছে।', 'ok');
-        }}]
-    });
-  }
-
   function exportCsv() {
     var rows = [['নাম', 'মোবাইল', 'ঠিকানা', 'গাড়ি', 'ইনভয়েস', 'মোট কেনা', 'নোট', 'কাস্টমার হয়েছেন']];
     all().forEach(function (c) {
@@ -510,8 +497,6 @@ var Customers = (function () {
     document.getElementById('addCustomerBtn').onclick = function () { form(null); };
     document.getElementById('exportCustBtn').onclick = exportCsv;
     document.getElementById('custProfileBack').onclick = function () { App.show('customers'); };
-    document.getElementById('cpOpeningBtn').onclick = function () { openingBalanceForm(false); };
-    document.getElementById('cpOpeningCollectBtn').onclick = function () { openingBalanceForm(true); };
     document.getElementById('cpPayDueBtn').onclick = function () { if (currentId) DueList.pay('id:' + currentId); };
     document.getElementById('cpEditBtn').onclick = function () { form(currentId); };
     document.getElementById('cpAddVehicleBtn').onclick = function () { addVehicleQuick(currentId); };
