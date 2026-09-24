@@ -22,7 +22,7 @@ var Reports = (function () {
     var totalEl = document.getElementById('repStockTotal');
     if (totalEl) totalEl.textContent = tx('মোট', 'Total') + ': ' + F.money(DB.stockValue());
     table.innerHTML =
-      '<thead><tr><th>' + tx('পণ্যের ধরন', 'Product type') + '</th><th class="num">' + tx('পণ্য', 'Products') + '</th><th>' + tx('মোট পরিমাণ', 'Total quantity') + '</th><th class="num">' + tx('মূল্য (ক্রয়মূল্যে)', 'Value (at cost)') + '</th></tr></thead><tbody>' +
+      '<thead><tr><th>' + tx('পণ্যের ধরন', 'Product type') + '</th><th class="num">' + tx('পণ্য', 'Products') + '</th><th>' + tx('মোট পরিমাণ', 'Total quantity') + '</th><th class="num">' + tx('ক্রয়মূল্য', 'Value at cost') + '</th></tr></thead><tbody>' +
       (list.length ? list.map(function (g) {
         return '<tr><td><b>' + F.esc(Stock.typeLabel(g.type)) + '</b></td>' +
           '<td class="num">' + g.count + '</td>' +

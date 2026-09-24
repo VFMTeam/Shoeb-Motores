@@ -33,7 +33,7 @@ var Sales = (function () {
     if (!s) return;
     var items = [
       { key: 'a5', label: 'A5 ইনভয়েস' },
-      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট (80mm)' }
+      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট' }
     ];
     if (s.collectionTracking === true && F.num(s.due) > 0.009) items.push({ key: 'collect', label: '＋ ক্যাশ' });
     if (DB.saleHasPending(s)) items.push({ key: 'price', label: 'দাম বসান' });

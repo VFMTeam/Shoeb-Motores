@@ -21,7 +21,7 @@ var Suppliers = (function () {
     document.getElementById('supKpis').innerHTML =
       kpi('blue', 'মোট কেনা', F.money(totals.total)) +
       kpi('green', 'মোট দিয়েছি', F.money(totals.paid)) +
-      kpi('', 'মোট বাকি (দিতে হবে)', F.money(totals.due));
+      kpi('', 'মোট বাকি', F.money(totals.due));
     if (q) list = list.filter(function (x) { return [x.s.name, x.s.phone, x.s.address].some(function (v) { return norm(v).indexOf(q) >= 0; }); });
     list.sort(function (a, b) { return (b.st.due - a.st.due) || String(a.s.name).localeCompare(String(b.s.name)); });
     var tb = document.querySelector('#supTable tbody');
@@ -59,7 +59,7 @@ var Suppliers = (function () {
     document.getElementById('spKpis').innerHTML =
       kpi('blue', 'মোট কেনা', F.money(st.total)) +
       kpi('green', 'দিয়েছি', F.money(st.paid)) +
-      kpi('', st.due < -0.009 ? 'অগ্রিম দেওয়া' : 'বাকি (দিতে হবে)', F.money(Math.abs(st.due)));
+      kpi('', st.due < -0.009 ? 'অগ্রিম দেওয়া' : 'বাকি', F.money(Math.abs(st.due)));
     document.querySelector('#spPurchases tbody').innerHTML = st.purchases.length ? st.purchases.map(function (x) {
       if (x.opening) {
         return '<tr><td>' + F.d(x.date) + '</td><td><span class="tag warn opening-tag">আগের বাকি</span>' + (x.note ? '<div class="cell-sub">' + F.esc(x.note) + '</div>' : '') + '</td>' +
