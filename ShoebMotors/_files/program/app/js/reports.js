@@ -8,7 +8,7 @@ var Reports = (function () {
     return n + (n === 1 ? ' invoice' : ' invoices');
   }
   /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখায় */
-  function moneyWords(v) { return en() ? F.wordsMoney(v) : F.wordsMoneyBn(v); }
+  function moneyWords(v) { return (en() ? F.wordsMoney(v) : F.wordsMoneyBn(v)).replace(/\s*(মাত্র|only)$/, ''); }
   function pcCount(n) { return F.qty(n) + (en() ? ' pc' : ' পিস'); }
 
   var appliedRange = null;

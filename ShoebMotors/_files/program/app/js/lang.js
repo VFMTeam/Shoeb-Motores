@@ -387,7 +387,7 @@ var Lang = (function () {
     '＋ নতুন পণ্য': '＋ New Product',
     'স্টকে এখনো কোনো পণ্য নেই।': 'No products in stock yet.',
     'কোনো পণ্য মেলেনি।': 'No products matched.',
-    'পুরো টাকা পাওয়া': 'Fully paid',
+    'পুরো টাকা পাওয়া': 'Fully paid', 'কোনো ইনভয়েস নেই।': 'No invoices.',
     'আংশিক টাকা': 'Partial payment',
     'আবার টাকা যোগ করা যাবে': 'More payment can be added',
     'এখনও টাকা যোগ হয়নি': 'No payment added yet',

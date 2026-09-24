@@ -6,17 +6,10 @@ var Collections = (function () {
     return Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন';
   }
 
+  /* তারিখ খালি থাকলে: যেসব ইনভয়েসে টাকা বাকি; তারিখ দিলে: সেই দিনের সব ইনভয়েস */
   function dayValue() {
     var el = document.getElementById('collectionDay');
-    return (el && el.value) || F.today();
-  }
-  function rangeStart() {
-    var el = document.getElementById('collectionStart');
-    return el && el.value ? el.value : null;
-  }
-  function rangeEnd() {
-    var el = document.getElementById('collectionEnd');
-    return el && el.value ? el.value : null;
+    return (el && el.value) || '';
   }
 
   function trackedSales() {
@@ -24,17 +17,11 @@ var Collections = (function () {
   }
 
   function currentList() {
-    var scope = (document.getElementById('collectionScope') || {}).value || 'day';
     var day = dayValue();
     var q = ((document.getElementById('collectionSearch') || {}).value || '').trim().toLowerCase();
     var list = trackedSales();
-    if (scope === 'day') list = list.filter(function (s) { return DB.todayStr(s.date) === day; });
-    if (scope === 'range') {
-      var rs = rangeStart(), re = rangeEnd();
-      if (rs) list = list.filter(function (s) { return s.date >= rs; });
-      if (re) list = list.filter(function (s) { return s.date <= re + 'T23:59:59'; });
-    }
-    if (scope === 'due') list = list.filter(function (s) { return F.num(s.due) > 0.009; });
+    if (day) list = list.filter(function (s) { return DB.todayStr(s.date) === day; });
+    else if (!q) list = list.filter(function (s) { return DB.saleHasPending(s) || DB.trueDue(s) > 0.009; });
     if (q) {
       list = list.filter(function (s) {
         return [s.invoiceNo, s.customerName, s.customerNameBn, s.customerPhone, s.vehicleNo].some(function (x) {
@@ -46,57 +33,23 @@ var Collections = (function () {
     return list;
   }
 
-  function rangeCollections() {
-    var rs = rangeStart(), re = rangeEnd();
-    if (!rs && !re) return [];
-    return DB.collectionsInRange(rs, re);
-  }
-
   function stat(label, value, sub) {
     return '<div class="collection-stat"><span class="cs-label">' + label + '</span><span class="cs-value">' + value + '</span><span class="cs-sub">' + (sub || '') + '</span></div>';
   }
 
   function renderKpis() {
-    var scope = (document.getElementById('collectionScope') || {}).value || 'day';
-    var day = dayValue();
-    var rangeMode = scope === 'range';
-    var periodSales, periodCollections, periodLabel;
-
-    if (rangeMode) {
-      var rs = rangeStart(), re = rangeEnd();
-      periodLabel = (rs || '?') + ' → ' + (re || '?');
-      periodSales = trackedSales().filter(function (s) {
-        if (rs && s.date < rs) return false;
-        if (re && s.date > re + 'T23:59:59') return false;
-        return true;
-      });
-      periodCollections = DB.collectionsInRange(rs, re);
-    } else {
-      periodLabel = F.d(day);
-      periodSales = trackedSales().filter(function (s) { return DB.todayStr(s.date) === day; });
-      periodCollections = DB.collectionsInRange(day, day);
-    }
-
-    var totalSales = periodSales.reduce(function (a, s) { return a + F.num(s.total); }, 0);
-    var cash = periodCollections.reduce(function (a, r) { return a + F.num(r.amount); }, 0);
-    var totalQty = periodSales.reduce(function (a, s) {
-      return a + s.items.reduce(function (b, i) { return b + F.num(i.qty); }, 0);
-    }, 0);
-    var full = 0, partial = 0, unpaid = 0, pending = 0;
-    periodSales.forEach(function (s) {
-      if (DB.saleHasPending(s)) { pending++; return; }
-      var paid = F.num(s.paid), due = F.num(s.due), total = F.num(s.total);
-      if (total > 0 && due <= 0.009 && paid > 0) full++;
-      else if (paid > 0 && due > 0.009) partial++;
-      else if (due > 0.009) unpaid++;
+    var day = dayValue() || F.today();
+    var daySales = trackedSales().filter(function (s) { return DB.todayStr(s.date) === day; });
+    var cash = DB.collectionsInRange(day, day).reduce(function (a, r) { return a + F.num(r.amount); }, 0);
+    var full = 0, open = 0;
+    daySales.forEach(function (s) {
+      if (DB.saleHasPending(s) || DB.trueDue(s) > 0.009) open++;
+      else if (F.num(s.total) > 0) full++;
     });
     document.getElementById('collectionKpis').innerHTML =
-      stat(rangeMode ? 'সময়কাল' : 'আজকের বিক্রি', periodSales.length + ' টি বিক্রি', periodLabel + ' · ' + F.money(totalSales)) +
-      stat('মোট পণ্য বিক্রি', totalQty + ' পিস', 'ইনভয়েসে বিক্রিত মোট পণ্য') +
-      stat('নগদ পাওয়া', F.money(cash), new Set(periodCollections.map(function (r) { return r.paymentGroup || r.id; })).size + ' টি collection entry') +
-      stat('পুরো টাকা পাওয়া', full + ' টি', 'ফুল পেইড') +
-      stat('আংশিক টাকা', partial + ' টি', 'আবার টাকা যোগ করা যাবে') +
-      stat('এখনও টাকা যোগ হয়নি', unpaid + ' টি', pending ? ('দাম বাকি ' + pending + ' টি') : '');
+      stat('নগদ পাওয়া', F.money(cash), F.d(day)) +
+      stat('পুরো টাকা পাওয়া', full + ' টি', '') +
+      stat('বাকি আছে', open + ' টি', '');
   }
 
   function renderTable() {
@@ -120,7 +73,7 @@ var Collections = (function () {
           (pendingPrice ? '<button class="btn small primary" data-collect="' + s.id + '">＋ ক্যাশ</button>' :
             (due > 0.009 ? '<button class="btn small primary" data-collect="' + s.id + '">আংশিক</button><button class="btn small ghost" data-full-collect="' + s.id + '">পুরো</button>' : '<span class="tag ok">হিসাব মিলেছে</span>')) +
         '</div></td></tr>';
-    }).join('') : UI.emptyRow(7, 'এই ফিল্টারে কোনো ট্র্যাক করা ইনভয়েস নেই।');
+    }).join('') : UI.emptyRow(7, 'কোনো ইনভয়েস নেই।');
 
     tb.querySelectorAll('[data-invoice]').forEach(function (b) { b.onclick = function () { UI.openInvoice(b.getAttribute('data-invoice')); }; });
     tb.querySelectorAll('[data-collect]').forEach(function (b) { b.onclick = function () { open(b.getAttribute('data-collect')); }; });
@@ -128,13 +81,8 @@ var Collections = (function () {
   }
 
   function renderHistory() {
-    var scope = (document.getElementById('collectionScope') || {}).value || 'day';
-    var rows;
-    if (scope === 'range') {
-      rows = rangeCollections().slice().sort(function (a, b) { return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date); });
-    } else {
-      rows = DB.collectionsInRange(null, null).slice().sort(function (a, b) { return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date); });
-    }
+    var day = dayValue();
+    var rows = DB.collectionsInRange(day || null, day || null).slice().sort(function (a, b) { return new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date); });
     var seenPayments = {};
     rows = rows.filter(function (r) {
       if (!r.paymentGroup) return true;
@@ -190,18 +138,16 @@ var Collections = (function () {
         refCard +
         '<div class="grid2" style="margin-top:12px">' +
           '<label>আজ কত টাকা পেলেন<input id="collectAmount" type="number" min="0.01" step="0.01"></label>' +
-          '<label>কালেকশনের তারিখ<input id="collectDate" type="date"></label>' +
+          '<label>বাকিটা কবে দেবে<input id="collectReminderDate" type="date" value="' + F.esc(s.dueReminderDate || '') + '"></label>' +
         '</div>' +
-        (!pendingPrice ? '<div class="row" style="margin:8px 0"><button class="btn small ghost" type="button" id="collectFullBtn">পুরো বাকি টাকা</button></div>' : '<p class="tiny warnline">এই invoice-এ কিছু আইটেমের দর পরে বসানো হবে। এখন পাওয়া টাকা advance collection হিসেবে যোগ হবে; পরে দর বসালে final Due নিজে হিসাব হবে।</p>') +
+        (!pendingPrice ? '<div class="row" style="margin:8px 0"><button class="btn small ghost" type="button" id="collectFullBtn">পুরো বাকি টাকা</button></div>' : '') +
         '<label>নোট<input id="collectNote" value="' + F.esc(s.dueReminderNote || '') + '"></label>' +
-        '<label>বাকিটা কবে দেবে<input id="collectReminderDate" type="date" value="' + F.esc(s.dueReminderDate || '') + '"></label>' +
-        '<p class="tiny muted" style="margin-top:2px">এই তারিখ পার হয়ে গেলেও বাকি মিটে না গেলে ড্যাশবোর্ডে দেখাবে। বাকি পুরো মিটে গেলে রিমাইন্ডার নিজে মুছে যাবে।</p>' +
         '',
       buttons: [
         { label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
         { label: 'কালেকশন সেভ করুন', cls: 'primary', onClick: function () {
           var amount = F.num(document.getElementById('collectAmount').value);
-          var date = document.getElementById('collectDate').value || F.today();
+          var date = F.today();
           var note = document.getElementById('collectNote').value.trim();
           var reminderDate = (document.getElementById('collectReminderDate') || {}).value || '';
           if (amount <= 0) { UI.toast('কালেকশনের টাকা লিখুন।', 'bad'); return; }
@@ -209,7 +155,6 @@ var Collections = (function () {
           try {
             var rec = DB.addCollection(s.id, amount, date, note, reminderDate);
             UI.closeModal();
-            var dayEl = document.getElementById('collectionDay'); if (dayEl) dayEl.value = date;
             /* App.refreshAll() already re-renders this Collections view when it's
                the active view — calling render() again here duplicated the work
                and added extra delay for no visible benefit. */
@@ -265,21 +210,8 @@ var Collections = (function () {
     wired = true;
     var search = document.getElementById('collectionSearch');
     if (search) search.oninput = UI.debounce(render, 160);
-    ['collectionDay', 'collectionScope', 'collectionStart', 'collectionEnd'].forEach(function (id) {
-      var el = document.getElementById(id); if (el) el.onchange = render;
-    });
-    var today = document.getElementById('collectionTodayBtn');
-    if (today) today.onclick = function () {
-      document.getElementById('collectionDay').value = F.today();
-      document.getElementById('collectionScope').value = 'day'; render();
-    };
-    var due = document.getElementById('collectionAllDueBtn');
-    if (due) due.onclick = function () { document.getElementById('collectionScope').value = 'due'; render(); };
-    var today2 = document.getElementById('closingTodayBtn');
-    if (today2) today2.onclick = function () {
-      document.getElementById('collectionDay').value = F.today();
-      document.getElementById('collectionScope').value = 'day';
-    };
+    var day = document.getElementById('collectionDay');
+    if (day) day.onchange = render;
   }
 
   return { render: render, bind: bind, open: open };

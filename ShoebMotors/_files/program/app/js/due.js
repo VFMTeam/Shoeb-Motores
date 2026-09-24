@@ -143,8 +143,8 @@ var DueList = (function () {
     tb.querySelectorAll('[data-pay-due]').forEach(function (b) { b.onclick=function () { pay(b.getAttribute('data-pay-due')); }; });
     tb.querySelectorAll('[data-customer]').forEach(function(b){ b.onclick=function(){ Customers.open(b.getAttribute('data-customer')); }; });
     tb.querySelectorAll('[data-dueinv]').forEach(function(b){ b.onclick=function(){
-      var scope=document.getElementById('collectionScope'), search=document.getElementById('collectionSearch');
-      if (scope) scope.value='due';
+      var day=document.getElementById('collectionDay'), search=document.getElementById('collectionSearch');
+      if (day) day.value='';
       if (search) search.value=b.getAttribute('data-phone') || b.getAttribute('data-name') || '';
       App.show('collections');
     }; });
@@ -155,7 +155,7 @@ var DueList = (function () {
     if (wired) return; wired=true;
     var s=document.getElementById('dueSearch'); if (s) s.oninput=UI.debounce(render,160);
     var sort=document.getElementById('dueSort'); if (sort) sort.onchange=render;
-    var c=document.getElementById('dueOpenCollections'); if (c) c.onclick=function(){ var sc=document.getElementById('collectionScope'); if(sc) sc.value='due'; App.show('collections'); };
+    var c=document.getElementById('dueOpenCollections'); if (c) c.onclick=function(){ var d=document.getElementById('collectionDay'), q=document.getElementById('collectionSearch'); if(d) d.value=''; if(q) q.value=''; App.show('collections'); };
   }
   return {render:render, bind:bind, pay:pay};
 })();
