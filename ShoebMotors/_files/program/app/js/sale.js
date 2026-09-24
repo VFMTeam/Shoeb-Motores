@@ -248,7 +248,7 @@ var Sale = (function () {
         '<input class="mini-input" style="width:52px;text-align:center" type="number" min="1" step="1" value="' + l.qty + '" data-qty="' + i + '">' +
         '<button class="qty-btn" data-plus="' + i + '">+</button></div>' + warn + '</td>' +
         '<td class="num"><div class="price-edit"><input class="mini-input" style="width:110px" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? l.price : '') + '" data-price="' + i + '"><button class="qty-btn price-later" type="button" data-clear-price="' + i + '" title="দর মুছুন">দর মুছুন</button></div></td>' +
-        '<td class="num"><b>' + F.money(l.qty * l.price) + '</b></td>' +
+        '<td class="num"><input class="mini-input line-total-input" style="width:120px" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? DB.round2(l.qty * l.price) : '') + '" data-total="' + i + '"></td>' +
         '<td><div class="row-actions"><button class="btn small ghost" data-del="' + i + '">✕</button></div></td>' +
         '</tr>';
     }).join('') : '';
@@ -263,6 +263,18 @@ var Sale = (function () {
         var v = raw ? F.num(raw) : 0;
         cart[i].price = v > 0 ? v : 0;
         cart[i].pending = !(v > 0);
+        renderCart();
+      };
+    });
+    /* মোট টাকা লিখলে পরিমাণ দিয়ে ভাগ করে এক পিসের দর নিজে বসে; পরে পরিমাণ বদলালে দর একই থাকে, মোট বাড়ে-কমে */
+    tb.querySelectorAll('[data-total]').forEach(function (inp) {
+      inp.onchange = function () {
+        var i = +inp.getAttribute('data-total');
+        var raw = String(inp.value || '').trim();
+        var t = raw ? F.num(raw) : 0;
+        var q = F.num(cart[i].qty) || 1;
+        cart[i].price = t > 0 ? DB.round2(t / q) : 0;
+        cart[i].pending = !(t > 0);
         renderCart();
       };
     });
