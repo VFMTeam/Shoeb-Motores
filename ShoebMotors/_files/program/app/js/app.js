@@ -242,7 +242,7 @@ var TITLES = {
       var pin = document.getElementById('setupPin').value.trim();
       var pin2 = document.getElementById('setupPin2').value.trim();
       if (!name) { err.textContent = 'অনুগ্রহ করে দোকানের নাম লিখুন।'; return; }
-      if (!/^[0-9]{4,6}$/.test(pin)) { err.textContent = 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে (শুধু সংখ্যা)।'; return; }
+      if (!/^[0-9]{4,6}$/.test(pin)) { err.textContent = 'পিন শুধু সংখ্যায়, ৪ থেকে ৬ ঘরের হতে হবে।'; return; }
       if (pin !== pin2) { err.textContent = 'দুইবার লেখা পিন মিলছে না।'; return; }
 
       var st = DB.state.settings;

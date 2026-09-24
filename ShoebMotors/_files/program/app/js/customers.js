@@ -248,7 +248,7 @@ var Customers = (function () {
       '<div class="row" style="justify-content:space-between;margin-bottom:6px"><b class="tiny">গাড়ি</b>' +
       '<button class="link-btn veh-del" type="button">মুছুন</button></div>' +
       '<div class="grid2">' +
-      '<label>গাড়ির নম্বর (ঐচ্ছিক)<input class="v-number" value="' + F.esc(v.number || v.model || 'নম্বরবিহীন গাড়ি') + '"></label>' +
+      '<label>গাড়ির নম্বর<input class="v-number" value="' + F.esc(v.number || v.model || 'নম্বরবিহীন গাড়ি') + '"></label>' +
       '<label>মডেল<input class="v-model" value="' + F.esc(v.model) + '"></label>' +
       '<label>ব্যবহৃত টায়ারের সাইজ<input class="v-size" value="' + F.esc(v.tyreSize) + '"></label>' +
       '<label>নোট<input class="v-note" value="' + F.esc(v.note) + '"></label>' +
@@ -280,7 +280,7 @@ var Customers = (function () {
             var phone = digitsOnly(document.getElementById('cfPhone').value);
             document.getElementById('cfPhone').value = phone;
             var nameBn = (document.getElementById('cfNameBn') || {}).value.trim();
-            if (!nameBn) { UI.toast('কাস্টমারের নাম (বাংলা) লিখুন।', 'bad'); return; }
+            if (!nameBn) { UI.toast('কাস্টমারের নাম লিখুন।', 'bad'); return; }
             var dup = customerByPhone(phone, c ? c.id : '');
             if (dup) { UI.toast('এই মোবাইল নম্বরটি আগেই ব্যবহার করেছেন (' + F.esc(dup.nameBn || dup.name) + ')। অন্য কাস্টমারের নম্বর ব্যবহার করবেন না।', 'bad', 4200); return; }
 
@@ -378,7 +378,7 @@ var Customers = (function () {
       '<tr><td class="muted">সব মিলিয়ে টাকা</td><td><b>' + F.money(st.total) + '</b></td></tr>' +
       '<tr><td class="muted">মোট ছাড় দেওয়া হয়েছে</td><td>' + F.money(st.discount) + '</td></tr>' +
       '<tr><td class="muted">এখন পর্যন্ত জমা দিয়েছেন</td><td>' + F.money(st.paid) + '</td></tr>' +
-      '<tr><td class="muted">মোট পাওনা (বর্তমান)</td><td><b>' + F.money(st.due) + '</b></td></tr>' +
+      '<tr><td class="muted">মোট পাওনা</td><td><b>' + F.money(st.due) + '</b></td></tr>' +
       '<tr><td class="muted">শেষ এসেছেন</td><td>' + (st.last ? F.d(st.last) : '—') + '</td></tr>';
 
     var vb = document.querySelector('#cpVehicles tbody');
@@ -424,7 +424,7 @@ var Customers = (function () {
         if (DB.itemPending(i)) line += '<span class="pend">দর ঠিক হয়নি</span>';
         else line += 'দর ' + F.money(i.price) + ' = ' + F.money(i.total);
         var cost = F.num(i.cost);
-        if (cost > 0) line += ' <span class="owner-only tiny muted">(ক্রয় ' + F.money(cost) + '/পিস — কাস্টমার দেখবে না)</span>';
+        if (cost > 0) line += ' <span class="owner-only tiny muted">· ক্রয় ' + F.money(cost) + '/পিস</span>';
         return line;
       }).join('<br>');
       return { date: s.date, html: '<tr><td><b>' + F.esc(s.invoiceNo) + '</b></td><td>' + F.d(s.date) + '</td>' +
@@ -465,7 +465,7 @@ var Customers = (function () {
     var payAllBtn = document.getElementById('cpPayDueBtn');
     if (payAllBtn) {
       payAllBtn.hidden = account.total <= 0.009;
-      payAllBtn.textContent = 'বকেয়া জমা (' + F.money(account.total) + ')';
+      payAllBtn.textContent = 'বকেয়া জমা ' + F.money(account.total);
     }
 
     document.querySelector('#cpSales tbody').querySelectorAll('[data-inv]').forEach(function (b) {

@@ -180,7 +180,7 @@ var Sales = (function () {
       s.subTotal, s.discount, s.total, s.cost, s.note]);
     });
     F.download('shoeb-motors-sales-' + F.today() + '.csv', F.csv(rows), 'text/csv');
-    UI.toast('বিক্রির হিসাব CSV ফাইলে সেভ হয়েছে (Excel-এ খুলবে)।', 'ok');
+    UI.toast('বিক্রির হিসাব CSV ফাইলে সেভ হয়েছে, Excel-এ খোলা যাবে।', 'ok');
   }
 
   function bind() {

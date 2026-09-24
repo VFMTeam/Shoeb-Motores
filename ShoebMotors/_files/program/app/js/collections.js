@@ -194,7 +194,7 @@ var Collections = (function () {
         '</div>' +
         (!pendingPrice ? '<div class="row" style="margin:8px 0"><button class="btn small ghost" type="button" id="collectFullBtn">পুরো বাকি টাকা</button></div>' : '<p class="tiny warnline">এই invoice-এ কিছু আইটেমের দর পরে বসানো হবে। এখন পাওয়া টাকা advance collection হিসেবে যোগ হবে; পরে দর বসালে final Due নিজে হিসাব হবে।</p>') +
         '<label>নোট<input id="collectNote" value="' + F.esc(s.dueReminderNote || '') + '"></label>' +
-        '<label>বাকিটা কবে দেবে (রিমাইন্ডার)<input id="collectReminderDate" type="date" value="' + F.esc(s.dueReminderDate || '') + '"></label>' +
+        '<label>বাকিটা কবে দেবে<input id="collectReminderDate" type="date" value="' + F.esc(s.dueReminderDate || '') + '"></label>' +
         '<p class="tiny muted" style="margin-top:2px">এই তারিখ পার হয়ে গেলেও বাকি মিটে না গেলে ড্যাশবোর্ডে দেখাবে। বাকি পুরো মিটে গেলে রিমাইন্ডার নিজে মুছে যাবে।</p>' +
         '',
       buttons: [

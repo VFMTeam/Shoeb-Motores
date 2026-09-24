@@ -672,7 +672,7 @@ function invoiceA4Bn(sale) {
       '<button class="btn small" id="btnPrintNow">🖨 প্রিন্ট</button>' +
       '<button class="btn small primary" id="btnPdfNow">⬇ PDF</button>' +
       '<button class="btn small ghost" id="btnWinAgain">নতুন জানালায় খুলুন</button>' +
-      (DB.saleHasPending(sale) ? '<button class="btn small ghost" id="btnSetPrice">' + (EN() ? 'Set price (unconfirmed)' : 'দর বসান (নিশ্চিত হয়নি)') + '</button>' : '') +
+      (DB.saleHasPending(sale) ? '<button class="btn small ghost" id="btnSetPrice">' + (EN() ? 'Set price' : 'দর বসান') + '</button>' : '') +
       '</div><div id="invPreviewBox"></div>';
     modal({
       title: (EN() ? 'Invoice ' : 'ইনভয়েস ') + sale.invoiceNo, body: wrap, wide: true,

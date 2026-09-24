@@ -360,7 +360,7 @@ var Sale = (function () {
       var names = over.map(function (l) { return l.name + ' (' + l.stock + ' স্টকে আছে, বিক্রি করা হচ্ছে ' + l.qty + ')'; }).join('<br>');
       UI.confirmDialog({
         title: 'স্টকে যথেষ্ট নেই',
-        message: 'এই আইটেমগুলো স্টকের চেয়ে বেশি:<br><b>' + names + '</b><br><br>তবুও বিক্রি করবেন? স্টক ঋণাত্মক হয়ে যাবে (সাধারণত এর মানে আপনি নতুন স্টক যোগ করতে ভুলে গেছেন)।',
+        message: 'এই আইটেমগুলো স্টকের চেয়ে বেশি:<br><b>' + names + '</b><br><br>তবুও বিক্রি করবেন? স্টক ঋণাত্মক হয়ে যাবে। সাধারণত এর মানে নতুন স্টক যোগ করতে ভুলে গেছেন।',
         confirmText: 'তবুও বিক্রি করুন', danger: true
       }).then(function (ok) { if (ok) doSave(); });
       return;

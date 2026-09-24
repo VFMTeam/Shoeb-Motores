@@ -206,7 +206,7 @@ var Reports = (function () {
     var table = document.getElementById('repTopCustomers');
     if (!table) return;
     table.innerHTML =
-      '<thead><tr><th>' + tx('কাস্টমার', 'Customer') + '</th><th class="num">' + tx('ইনভয়েস', 'Invoices') + '</th><th class="num">' + tx('পণ্য (পিস)', 'Products (pcs)') + '</th><th class="num">' + tx('মোট কেনা', 'Total bought') + '</th></tr></thead><tbody>' +
+      '<thead><tr><th>' + tx('কাস্টমার', 'Customer') + '</th><th class="num">' + tx('ইনভয়েস', 'Invoices') + '</th><th class="num">' + tx('মোট পিস', 'Total pcs') + '</th><th class="num">' + tx('মোট কেনা', 'Total bought') + '</th></tr></thead><tbody>' +
       (list.length ? list.map(function (c) {
         return '<tr><td><div class="cell-main"><b>' + F.esc(c.name) + '</b></div>' +
           (c.phone ? '<div class="cell-sub mono">' + F.esc(c.phone) + '</div>' : '') + '</td>' +

@@ -186,7 +186,7 @@ var Stock = (function () {
     'টিউব':       { units: ['পিস'],
                     brand: ['ব্র্যান্ড', 0, ''], size: ['সাইজ', 1, ''], model: null },
     'ব্যাটারি':    { units: ['পিস'],
-                    brand: ['ব্র্যান্ড', 1, ''], size: ['ক্ষমতা (ভোল্ট / Ah)', 1, ''], model: ['মডেল', 0, ''] },
+                    brand: ['ব্র্যান্ড', 1, ''], size: ['ক্ষমতা ভোল্ট / Ah', 1, ''], model: ['মডেল', 0, ''] },
     'মোটর অয়েল':  { units: ['পিস', 'লিটার'],
                     brand: ['ব্র্যান্ড', 1, ''], size: ['গ্রেড ও প্যাক সাইজ', 1, ''], model: ['কোন অয়েল', 0, ''] },
     'মোটর পার্টস': { units: ['পিস'], descReq: 'পার্টসের নাম',
@@ -198,7 +198,7 @@ var Stock = (function () {
     'পলিথিন':     { units: ['কেজি', 'পিস', 'ফুট'], descReq: 'পলিথিনের নাম / ধরন',
                     brand: ['ব্র্যান্ড / কোম্পানি', 0, ''], size: ['মাপ / মাইক্রন', 0, ''], model: null },
     'পলি ত্রিপল':  { units: ['পিস', 'ফুট'], descReq: 'ত্রিপলের নাম',
-                    brand: ['ব্র্যান্ড / কোম্পানি', 0, ''], size: ['মাপ (ফুট × ফুট)', 0, ''], model: null },
+                    brand: ['ব্র্যান্ড / কোম্পানি', 0, ''], size: ['মাপ ফুট × ফুট', 0, ''], model: null },
     'রিম':        { units: ['পিস'],
                     brand: ['ব্র্যান্ড', 0, ''], size: ['সাইজ', 1, ''], model: ['মডেল / ধরন', 0, ''] },
     'অন্যান্য':    { units: UNITS.slice(), descReq: 'পণ্যের নাম / বিবরণ',
@@ -272,7 +272,7 @@ var Stock = (function () {
       '<label>কম স্টকের সীমা<input id="pfLowStock" type="number" step="1" min="0" value="' + (isNew ? (F.num(DB.state.settings.lowStockLevel) || 2) : F.num(p.lowStock)) + '"></label>' +
       (isNew ? supplierFields('pf') : '') +
       '</div>' +
-      (isNew ? '<label class="check" style="margin-top:10px"><input type="checkbox" id="pfMore"> আরও পণ্য যোগ করব (একই ধরন)</label>' : '');
+      (isNew ? '<label class="check" style="margin-top:10px"><input type="checkbox" id="pfMore"> একই ধরনের আরও পণ্য যোগ করব</label>' : '');
 
     UI.modal({
       title: isNew ? 'স্টকে নতুন ' + presetType + ' যোগ করুন' : 'পণ্যের তথ্য বদলান — ' + label(p),
@@ -303,7 +303,7 @@ var Stock = (function () {
         function unitText() {
           var u = uEl.value || 'পিস';
           qEl.step = (u === 'পিস') ? '1' : '0.01';
-          root.querySelector('#pfQtyLbl').textContent = 'পরিমাণ (' + u + ') *';
+          root.querySelector('#pfQtyLbl').textContent = 'কত ' + u + ' *';
           root.querySelector('#pfBuyLbl').textContent = 'ক্রয়মূল্য — প্রতি ' + u;
           root.querySelector('#pfSellLbl').textContent = 'বিক্রয়মূল্য — প্রতি ' + u;
         }
@@ -364,7 +364,7 @@ var Stock = (function () {
       var buy = buyRaw ? F.num(buyRaw) : 0;
       var qty = F.num(v('pfQty'));
       var lowStock = Math.max(0, Math.floor(F.num(v('pfLowStock'))));
-      if (isNew && qty <= 0) { UI.toast('পরিমাণ লিখুন (০-এর বেশি)।', 'bad'); return; }
+      if (isNew && qty <= 0) { UI.toast('পরিমাণ ০-এর বেশি লিখুন।', 'bad'); return; }
       var supInfo = null;
       if (isNew) { try { supInfo = readSupplierFields(root, 'pf'); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; } }
       if (!isNew && qty < 0) { UI.toast('পরিমাণ ঠিক লিখুন।', 'bad'); return; }
@@ -674,7 +674,7 @@ var Stock = (function () {
       '<tr><td>এই মাসে</td><td class="num">' + F.qty(month.qty) + ' ' + F.esc(p.unit || 'পিস') + ' · ' + F.money(month.revenue) + '</td></tr>' +
       '<tr><td>সব সময়</td><td class="num">' + F.qty(allTime.qty) + ' ' + F.esc(p.unit || 'পিস') + ' · ' + F.money(allTime.revenue) + '</td></tr>' +
       '</tbody></table>' +
-      '<div class="section-title">কেনার হিসাব (স্টক যোগ)</div>' +
+      '<div class="section-title">কেনার হিসাব</div>' +
       '<table class="table compact"><thead><tr><th>তারিখ</th><th class="num">পরিমাণ</th><th class="num">প্রতি ' + F.esc(p.unit || 'পিস') + '</th><th class="num">মোট টাকা</th><th>সাপ্লায়ার</th></tr></thead><tbody>' +
       ((p.purchases || []).length ? p.purchases.slice().reverse().map(function (x) {
         var tot = F.num(x.total) || (F.num(x.qty) * F.num(x.buyPrice));
@@ -772,7 +772,7 @@ var Stock = (function () {
       (F.num(p.qty) * F.num(p.buyPrice)).toFixed(2), p.lowStock, p.note]);
     });
     F.download('shoeb-motors-stock-' + F.today() + '.csv', F.csv(rows), 'text/csv');
-    UI.toast('স্টকের তালিকা CSV ফাইলে সেভ হয়েছে (Excel-এ খুলবে)।', 'ok');
+    UI.toast('স্টকের তালিকা CSV ফাইলে সেভ হয়েছে, Excel-এ খোলা যাবে।', 'ok');
   }
 
   function bind() {
@@ -802,14 +802,14 @@ var Stock = (function () {
       'ব্র্যান্ড · প্যাক': 'Brand · pack', 'নাম · মাপ · কেজি': 'Name · size · kg', 'নাম · মাপ': 'Name · size', 'নিজে নাম লিখুন': 'Type the name yourself',
       'ব্র্যান্ড': 'Brand', 'ব্র্যান্ড *': 'Brand *', 'ব্র্যান্ড / কোম্পানি': 'Brand / company', 'সাইজ': 'Size', 'সাইজ *': 'Size *',
       'মডেল': 'Model', 'মডেল / প্যাটার্ন': 'Model / pattern', 'মডেল / ধরন': 'Model / kind', 'কোন অয়েল': 'Oil kind',
-      'ক্ষমতা (ভোল্ট / Ah) *': 'Capacity (volt / Ah) *', 'গ্রেড ও প্যাক সাইজ *': 'Grade & pack size *', 'গাড়ি / পার্ট নম্বর': 'Vehicle / part no.',
-      'মোটা / মাপ': 'Thickness / size', 'প্যাক / ওজন': 'Pack / weight', 'মাপ / মাইক্রন': 'Size / micron', 'মাপ (ফুট × ফুট)': 'Size (ft × ft)',
+      'ক্ষমতা ভোল্ট / Ah *': 'Capacity volt / Ah *', 'গ্রেড ও প্যাক সাইজ *': 'Grade & pack size *', 'গাড়ি / পার্ট নম্বর': 'Vehicle / part no.',
+      'মোটা / মাপ': 'Thickness / size', 'প্যাক / ওজন': 'Pack / weight', 'মাপ / মাইক্রন': 'Size / micron', 'মাপ ফুট × ফুট': 'Size ft × ft',
       'সাইজ / স্পেসিফিকেশন': 'Size / specification',
       'পণ্যের নাম / বিবরণ': 'Item name / description', 'পার্টসের নাম *': 'Part name *', 'রশির নাম *': 'Rope name *', 'পলিথিনের নাম / ধরন *': 'Polythene name / kind *',
       'ত্রিপলের নাম *': 'Tarpaulin name *', 'পণ্যের নাম / বিবরণ *': 'Item name / description *',
       'না থাকলে খালি রাখুন': 'Leave empty if not applicable',
       'না লিখলে ব্র্যান্ড + সাইজ থেকে নিজে তৈরি হবে': 'If left empty, it is built from brand + size',
-      'আরও পণ্য যোগ করব (একই ধরন)': 'Add more items (same type)',
+      'একই ধরনের আরও পণ্য যোগ করব': 'Add more items of the same type',
       'কেজি / ফুট / লিটার দরে বিক্রি হলে এখান থেকে বেছে নিন': 'Choose here if sold by kg / ft / litre',
       'কোনো পণ্য পাওয়া যায়নি। নিচের “＋ নতুন” বোতামে চাপুন।': 'No item found. Use the “＋ New” button below.',
       '＋ নতুন পণ্য': '＋ New item'
