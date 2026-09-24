@@ -7,6 +7,8 @@ var Reports = (function () {
     if (!en()) return n + ' টি ইনভয়েস';
     return n + (n === 1 ? ' invoice' : ' invoices');
   }
+  /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখায় */
+  function moneyWords(v) { return en() ? F.wordsMoney(v) : F.wordsMoneyBn(v); }
   function pcCount(n) { return F.qty(n) + (en() ? ' pc' : ' পিস'); }
 
   var appliedRange = null;
@@ -20,7 +22,7 @@ var Reports = (function () {
     if (!table) return;
     var list = Stock.typeSummary();
     var totalEl = document.getElementById('repStockTotal');
-    if (totalEl) totalEl.textContent = tx('মোট', 'Total') + ': ' + F.money(DB.stockValue());
+    if (totalEl) { totalEl.textContent = tx('মোট', 'Total') + ': ' + F.money(DB.stockValue()); totalEl.title = moneyWords(DB.stockValue()); totalEl.classList.add('money-words'); }
     table.innerHTML =
       '<thead><tr><th>' + tx('পণ্যের ধরন', 'Product type') + '</th><th class="num">' + tx('পণ্য', 'Products') + '</th><th>' + tx('মোট পরিমাণ', 'Total quantity') + '</th><th class="num">' + tx('ক্রয়মূল্য', 'Value at cost') + '</th></tr></thead><tbody>' +
       (list.length ? list.map(function (g) {
@@ -28,7 +30,7 @@ var Reports = (function () {
           '<td class="num">' + g.count + '</td>' +
           '<td class="detail-stock-total">' + Stock.unitTotalsHtml(g) + '</td>' +
           '<td class="num">' + F.money(g.value) + '</td></tr>';
-      }).join('') + '<tr class="total-row"><td colspan="3">' + tx('মোট স্টক মূল্য', 'Total stock value') + '</td><td class="num">' + F.money(DB.stockValue()) + '</td></tr>'
+      }).join('') + '<tr class="total-row"><td colspan="3">' + tx('মোট স্টক মূল্য', 'Total stock value') + '</td><td class="num money-words" title="' + F.esc(moneyWords(DB.stockValue())) + '">' + F.money(DB.stockValue()) + '</td></tr>'
         : '<tr class="empty-row"><td colspan="4">' + tx('এখনো কোনো স্টক নেই।', 'No stock yet.') + '</td></tr>') +
       '</tbody>';
   }

@@ -8,19 +8,12 @@ var Dashboard = (function () {
     return sum(list, function (s) { return (s.items || []).reduce(function (x, i) { return x + F.num(i.qty); }, 0); });
   }
   function monthRange() { return { from: F.startOfMonth(), to: F.today() }; }
-  function moneyWords(v) {
-    var en = (window.Lang && typeof Lang.isEn === 'function') ? Lang.isEn() : !!(DB.state && DB.state.settings && DB.state.settings.lang === 'en');
-    return en ? F.wordsMoney(v) : F.wordsMoneyBn(v);
-  }
   function setDashboardMoney(id, v) {
     var el = document.getElementById(id);
     if (!el) return;
     el.textContent = F.money(v);
-    el.title = moneyWords(v);
   }
-  function moneyWithHover(v) {
-    return '<span title="' + F.esc(moneyWords(v)) + '">' + F.money(v) + '</span>';
-  }
+  function moneyWithHover(v) { return F.money(v); }
 
   function render() {
     var today = F.today();
@@ -50,7 +43,7 @@ var Dashboard = (function () {
     /* --- স্টক কম --- */
     var low = DB.lowStockList();
     document.getElementById('kpiLow').textContent = low.length;
-    document.getElementById('kpiLowSub').textContent = low.length ? 'পণ্য শেষ হয়ে যাচ্ছে — যোগ করুন' : 'সব পণ্যের স্টক ঠিক আছে';
+    document.getElementById('kpiLowSub').textContent = '';
 
     /* --- চোখে পড়ার মতো Low Stock warning --- */
     var lowBanner = document.getElementById('lowStockBanner');
@@ -84,7 +77,7 @@ var Dashboard = (function () {
       .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
 
     var kd = document.getElementById('kpiDueReminder'); if (kd) kd.textContent = remList.length;
-    var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = remList.length ? 'মেয়াদ পার হওয়া বাকি — টাকা তুলুন' : 'কোনো বাকি রিমাইন্ডার নেই';
+    var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = '';
 
     /* আজকের কার্ড: আজকের বিলে কত বাকি রইল, আর আজ আগের দিনের ইনভয়েস / আগের বকেয়া থেকে কত পেলাম */
     setDashboardMoney('kpiTodayNewDue', sum(finalToday, function (s) { return DB.trueDue(s); }));

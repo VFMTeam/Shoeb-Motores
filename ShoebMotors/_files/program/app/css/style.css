@@ -3003,3 +3003,4 @@ html[data-theme="dark"] .modal .inv-note *{color:#fff !important;-webkit-text-fi
 .dash-stat-link{cursor:pointer}
 .dash-stat-link:hover{outline:1px solid var(--line)}
 .dash-stat .m-val small{font-size:12px;font-weight:700;opacity:.8}
+.money-words{cursor:help}
