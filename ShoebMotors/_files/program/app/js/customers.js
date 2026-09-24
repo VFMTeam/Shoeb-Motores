@@ -213,7 +213,6 @@ var Customers = (function () {
         '<td class="num">' + F.money(x.st.total) + '</td>' +
         '<td>' + (x.st.last ? F.relDay(DB.todayStr(x.st.last)) : '') + '</td>' +
         '<td><div class="row-actions">' +
-        '<button class="btn small" data-open="' + c.id + '">খুলুন</button>' +
         '<button class="btn small ghost" data-sell="' + c.id + '">বিক্রি</button>' +
         '<button class="btn small ghost" data-edit="' + c.id + '">বদলান</button>' +
         '</div></td>' +
@@ -265,8 +264,8 @@ var Customers = (function () {
       '<label>মোবাইল নম্বর<input id="cfPhone" value="' + F.esc(c ? c.phone : '') + '" inputmode="text" lang="bn" pattern="[0-9০-৯ +()-]*" maxlength="20"></label>' +
       '</div>' +
       '<label>ঠিকানা<input id="cfAddress" value="' + F.esc(c ? addressText(c) : '') + '"></label>' +
-      '<label>আগের বকেয়া (পুরোনো খাতার হিসাব, না থাকলে খালি রাখুন)<input id="cfOpening" inputmode="decimal" autocomplete="off" value="' + (c && F.num(c.openingBalance) ? F.esc(String(c.openingBalance)) : '') + '"></label>' +
-      (c && DB.openingPaid(c.id) > 0 ? '<p class="tiny muted">আগের বকেয়া থেকে ইতিমধ্যে জমা: ' + F.money(DB.openingPaid(c.id)) + '। এর চেয়ে কম লেখা যাবে না।</p>' : '') +
+      (isNew ? '<div class="grid2"><label>আগের বকেয়া (না থাকলে খালি রাখুন)<input id="cfOpening" inputmode="decimal" autocomplete="off"></label>' +
+        '<label>আগের বকেয়ার নোট<input id="cfOpeningNote" autocomplete="off" placeholder="যেমন: পুরোনো খাতার বাকি"></label></div>' : '') +
       '<div class="section-title">এই কাস্টমারের গাড়ি</div>' +
       '<div id="vehList">' + ((c && c.vehicles && c.vehicles.length) ? c.vehicles.map(vehicleRow).join('') : '') + '</div>' +
       '<button class="btn small ghost" type="button" id="addVehBtn">＋ গাড়ি যোগ করুন</button>' +
@@ -298,19 +297,19 @@ var Customers = (function () {
             });
 
             var addressBn = ''; // One address field; legacy values are combined before editing.
-            var openingRaw = document.getElementById('cfOpening').value.trim() || '0';
-            if (!isNew) {
-              try { DB.setOpeningBalance(c.id, openingRaw); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
-            }
             if (isNew) {
               c = {
                 id: DB.uid('c'), name: '', nameBn: nameBn, addressBn: addressBn.trim(), phone: phone,
                 address: document.getElementById('cfAddress').value.trim(),
                 note: '',
-                createdAt: new Date().toISOString(), vehicles: vehicles, payments: []
+                createdAt: new Date().toISOString(), vehicles: vehicles, payments: [], openingDues: []
               };
               DB.state.customers.push(c);
-              try { DB.setOpeningBalance(c.id, openingRaw); } catch (err) { DB.state.customers.pop(); UI.toast(F.esc(err.message), 'bad'); return; }
+              var openingRaw = document.getElementById('cfOpening').value.trim();
+              if (openingRaw) {
+                try { DB.addOpeningDue(c.id, openingRaw, DB.todayStr(), document.getElementById('cfOpeningNote').value); }
+                catch (err) { DB.state.customers.pop(); UI.toast(F.esc(err.message), 'bad'); return; }
+              }
               DB.nextNo('customer');
               UI.toast('কাস্টমার <b>' + F.esc(nameBn) + '</b> যোগ হয়েছে।', 'ok');
             } else {
@@ -386,8 +385,6 @@ var Customers = (function () {
       '<tr><td class="muted">সব মিলিয়ে টাকা</td><td><b>' + F.money(st.total) + '</b></td></tr>' +
       '<tr><td class="muted">মোট ছাড় দেওয়া হয়েছে</td><td>' + F.money(st.discount) + '</td></tr>' +
       '<tr><td class="muted">এখন পর্যন্ত জমা দিয়েছেন</td><td>' + F.money(st.paid) + '</td></tr>' +
-      (F.num(c.openingBalance) > 0 ? '<tr><td class="muted">আগের বকেয়া</td><td>' + F.money(c.openingBalance) +
-        ' · জমা ' + F.money(DB.openingPaid(id)) + ' · বাকি <b>' + F.money(DB.openingDue(id)) + '</b></td></tr>' : '') +
       '<tr><td class="muted">মোট পাওনা (বর্তমান)</td><td><b>' + F.money(st.due) + '</b></td></tr>' +
       '<tr><td class="muted">শেষ এসেছেন</td><td>' + (st.last ? F.d(st.last) : '—') + '</td></tr>';
 
@@ -437,7 +434,7 @@ var Customers = (function () {
         if (cost > 0) line += ' <span class="owner-only tiny muted">(ক্রয় ' + F.money(cost) + '/পিস — কাস্টমার দেখবে না)</span>';
         return line;
       }).join('<br>');
-      return '<tr><td><b>' + F.esc(s.invoiceNo) + '</b></td><td>' + F.d(s.date) + '</td>' +
+      return { date: s.date, html: '<tr><td><b>' + F.esc(s.invoiceNo) + '</b></td><td>' + F.d(s.date) + '</td>' +
         '<td class="tiny">' + itemsTxt + '</td>' +
         '<td class="num">' + F.money(s.subTotal) + '</td>' +
         '<td class="num">' + (F.num(s.discount) ? F.money(s.discount) : '—') + '</td>' +
@@ -448,11 +445,28 @@ var Customers = (function () {
         (canPay ? '<button class="btn small primary" data-pay-inv="' + s.id + '">টাকা জমা</button>' : '') +
         '<button class="btn small" data-inv="' + s.id + '">ইনভয়েস</button>' +
         (pending ? '<button class="btn small" data-price="' + s.id + '">দর বসান</button>' : '') +
-        '</div></td></tr>';
+        '</div></td></tr>' };
     });
-    document.querySelector('#cpSales tbody').innerHTML = rows.length ? rows.join('') : UI.emptyRow(9, 'এখনো কোনো কেনার হিসাব নেই।');
+    /* আগের বকেয়া — ইনভয়েসের মতোই একটি সারি: নোট, মোট, জমা, বাকি, আর আলাদা করে টাকা জমা। */
+    var openingDueTotal = 0;
+    DB.openingEntries(id).forEach(function (e) {
+      openingDueTotal += e.due;
+      rows.push({ date: e.date + 'T00:00:00', html: '<tr class="opening-due-row"><td><span class="tag warn">আগের বকেয়া</span></td><td>' + F.d(e.date) + '</td>' +
+        '<td class="tiny">' + (F.esc(e.note) || '<span class="muted">পুরোনো হিসাবের বাকি</span>') + '</td>' +
+        '<td class="num">' + F.money(e.amount) + '</td><td class="num">—</td>' +
+        '<td class="num"><b>' + F.money(e.amount) + '</b></td>' +
+        '<td class="num">' + F.money(e.paid) + '</td>' +
+        '<td class="num">' + (e.due > 0.009 ? '<b class="pend">' + F.money(e.due) + '</b>' : '<span class="muted">পরিশোধিত</span>') + '</td>' +
+        '<td><div class="row-actions">' +
+        (e.due > 0.009 ? '<button class="btn small primary" data-pay-opening="' + F.esc(e.id) + '">টাকা জমা</button>' : '') +
+        '<button class="btn small" data-edit-opening="' + F.esc(e.id) + '">বদলান</button>' +
+        (e.paid <= 0.009 ? '<button class="btn small ghost" data-del-opening="' + F.esc(e.id) + '">মুছুন</button>' : '') +
+        '</div></td></tr>' });
+    });
+    rows.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+    document.querySelector('#cpSales tbody').innerHTML = rows.length ? rows.map(function (r) { return r.html; }).join('') : UI.emptyRow(9, 'এখনো কোনো কেনার হিসাব নেই।');
 
-    document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total) + ' · ইনভয়েসে বাকি: ' + F.money(invoiceDueTotal);
+    document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total) + ' · মোট বাকি: ' + F.money(DB.round2(invoiceDueTotal + openingDueTotal));
     var account = DB.duePaymentAccount('id:' + id);
     var payAllBtn = document.getElementById('cpPayDueBtn');
     if (payAllBtn) {
@@ -466,10 +480,75 @@ var Customers = (function () {
     document.querySelector('#cpSales tbody').querySelectorAll('[data-pay-inv]').forEach(function (b) {
       b.onclick = function () { Collections.open(b.getAttribute('data-pay-inv')); };
     });
+    var tb = document.querySelector('#cpSales tbody');
+    tb.querySelectorAll('[data-pay-opening]').forEach(function (b) { b.onclick = function () { payOpening(id, b.getAttribute('data-pay-opening')); }; });
+    tb.querySelectorAll('[data-edit-opening]').forEach(function (b) { b.onclick = function () { openingForm(id, b.getAttribute('data-edit-opening')); }; });
+    tb.querySelectorAll('[data-del-opening]').forEach(function (b) { b.onclick = function () { deleteOpening(id, b.getAttribute('data-del-opening')); }; });
     document.querySelector('#cpSales tbody').querySelectorAll('[data-price]').forEach(function (b) {
       b.onclick = function () { if (window.Sales && Sales.setPrices) Sales.setPrices(b.getAttribute('data-price')); };
     });
   }
+
+  /* ------- আগের বকেয়া: যোগ / বদল / মুছুন / টাকা জমা ------- */
+  function openingForm(cid, entryId) {
+    var e = entryId ? DB.openingEntries(cid).filter(function (x) { return x.id === entryId; })[0] : null;
+    if (entryId && !e) { UI.toast('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।', 'bad'); return; }
+    UI.modal({ title: e ? 'আগের বকেয়া বদলান' : 'আগের বকেয়া যোগ করুন',
+      body: '<div class="grid2"><label>টাকার পরিমাণ<input id="odAmount" inputmode="decimal" autocomplete="off" value="' + (e ? F.esc(String(e.amount)) : '') + '"></label>' +
+        '<label>তারিখ<input id="odDate" type="date" value="' + F.esc(e ? e.date : F.today()) + '"></label></div>' +
+        '<label>নোট<input id="odNote" autocomplete="off" placeholder="যেমন: পুরোনো খাতার বাকি" value="' + (e ? F.esc(e.note) : '') + '"></label>' +
+        (e && e.paid > 0 ? '<p class="tiny muted">এই বকেয়া থেকে ইতিমধ্যে জমা: ' + F.money(e.paid) + '। এর চেয়ে কম লেখা যাবে না।</p>' :
+          '<p class="tiny muted">এই টাকা কাস্টমারের বর্তমান বাকির সাথে যোগ হবে এবং কেনাকাটার হিসাবে ইনভয়েসের মতো দেখাবে।</p>'),
+      buttons: [{ label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
+        { label: 'সেভ করুন', cls: 'primary', onClick: function () {
+          var amount = document.getElementById('odAmount').value, date = document.getElementById('odDate').value, note = document.getElementById('odNote').value;
+          try {
+            if (e) DB.updateOpeningDue(cid, e.id, amount, date, note);
+            else DB.addOpeningDue(cid, amount, date, note);
+          } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+          UI.closeModal(); App.refreshAll(); UI.toast(e ? 'আগের বকেয়া বদল হয়েছে।' : 'আগের বকেয়া যোগ হয়েছে।', 'ok');
+        } }],
+      onOpen: function (root) { root.querySelector('#odAmount').focus(); }
+    });
+  }
+
+  function deleteOpening(cid, entryId) {
+    UI.confirmDialog({ title: 'আগের বকেয়া মুছে ফেলবেন?', message: 'এই বকেয়ার এন্ট্রিটি কাস্টমারের হিসাব থেকে মুছে যাবে।', danger: true, confirmText: 'মুছে ফেলুন' })
+      .then(function (ok) {
+        if (!ok) return;
+        try { DB.deleteOpeningDue(cid, entryId); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+        App.refreshAll(); UI.toast('আগের বকেয়া মুছে ফেলা হয়েছে।', 'ok');
+      });
+  }
+
+  function payOpening(cid, entryId) {
+    var e = DB.openingEntries(cid).filter(function (x) { return x.id === entryId; })[0];
+    if (!e || e.due <= 0.009) { UI.toast('এই বকেয়া ইতিমধ্যে পরিশোধ হয়েছে।', 'ok'); return; }
+    var submitted = false;
+    UI.modal({ title: 'টাকা জমা — আগের বকেয়া',
+      body: '<div class="existing-customer-card"><div class="ec-meta">' + F.d(e.date) + (e.note ? ' · ' + F.esc(e.note) : '') +
+          ' · মোট: <b>' + F.money(e.amount) + '</b> · আগে জমা: <b>' + F.money(e.paid) + '</b> · বাকি: <b>' + F.money(e.due) + '</b></div></div>' +
+        '<div class="grid2" style="margin-top:12px"><label>আজ কত টাকা পেলেন<input id="odPayAmount" inputmode="decimal" autocomplete="off"></label>' +
+        '<label>জমার তারিখ<input id="odPayDate" type="date" value="' + F.today() + '"></label></div>' +
+        '<div class="row" style="margin:8px 0"><button class="btn small ghost" type="button" id="odPayFull">পুরো বাকি টাকা</button></div>',
+      buttons: [{ label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
+        { label: 'জমা সেভ করুন', cls: 'primary', onClick: function () {
+          if (submitted) return;
+          try {
+            var result = DB.collectOpeningDue(cid, e.id, document.getElementById('odPayAmount').value, document.getElementById('odPayDate').value);
+          } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+          submitted = true;
+          UI.closeModal(); App.refreshAll();
+          if (!result.saved) { UI.toast('ডেটা সেভ নিশ্চিত হয়নি। আবার জমা চাপবেন না; সেভ স্ট্যাটাস দেখুন।', 'bad', 8000); return; }
+          setTimeout(function () { UI.openCollectionReceipt(result.receipt); }, 120);
+        } }],
+      onOpen: function (root) {
+        root.querySelector('#odPayFull').onclick = function () { var a = root.querySelector('#odPayAmount'); a.value = e.due; a.focus(); };
+        root.querySelector('#odPayAmount').focus();
+      }
+    });
+  }
+
 
   /* ------- vehicle add (from profile) ------- */
   function addVehicleQuick(customerId) {
@@ -498,6 +577,7 @@ var Customers = (function () {
     document.getElementById('exportCustBtn').onclick = exportCsv;
     document.getElementById('custProfileBack').onclick = function () { App.show('customers'); };
     document.getElementById('cpPayDueBtn').onclick = function () { if (currentId) DueList.pay('id:' + currentId); };
+    document.getElementById('cpAddOpeningBtn').onclick = function () { if (currentId) openingForm(currentId); };
     document.getElementById('cpEditBtn').onclick = function () { form(currentId); };
     document.getElementById('cpAddVehicleBtn').onclick = function () { addVehicleQuick(currentId); };
     document.getElementById('cpNewSaleBtn').onclick = function () { App.show('sale'); Sale.setCustomer(currentId); };

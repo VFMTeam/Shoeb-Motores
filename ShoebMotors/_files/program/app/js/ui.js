@@ -38,6 +38,8 @@ var UI = (function () {
     ['দর (', 'Rate ('],
     ['টাকা (', 'Amount ('],
     [' পিস × ', ' pcs × '],
+    ['আগের বকেয়া', 'Previous due'],
+    ['নোট', 'Note']
   ];
   function enHtml(h) {
     if (!EN()) return h;
@@ -361,6 +363,13 @@ function invoiceA4Bn(sale) {
   function invoiceThermal(sale) { return invoiceThermalBn(sale); }
 
   /* ---------- মূল্য পরিশোধের রসিদ ---------- */
+  function openingRemaining(rec) {
+    if (rec.openingDueId) {
+      var e = DB.openingEntries(rec.customerId).filter(function (x) { return x.id === rec.openingDueId; })[0];
+      if (e) return e.due;
+    }
+    return DB.openingDue(rec.customerId);
+  }
   function collectionReceiptA4Bn(rec) {
     rec = DB.collectionReceipt(rec);
     var sale = DB.saleById(rec.saleId);
@@ -369,7 +378,16 @@ function invoiceA4Bn(sale) {
     var name = rec.customerName || (sale && (sale.customerNameBn || sale.customerName)) || 'ওয়াক-ইন কাস্টমার';
     var customer = (rec.openingBalance || rec.paymentGroup) ? DB.customerById(rec.customerId) : null;
     var phone = rec.customerPhone || (sale ? (sale.customerPhone || '') : (customer ? customer.phone || '' : ''));
-    var remaining = rec.paymentGroup ? rec.balanceAfter : rec.openingBalance ? DB.openingDue(rec.customerId) : (sale && !DB.saleHasPending(sale) ? Math.max(0, F.num(sale.due)) : null);
+    var remaining = rec.paymentGroup ? rec.balanceAfter : rec.openingBalance ? openingRemaining(rec) : (sale && !DB.saleHasPending(sale) ? Math.max(0, F.num(sale.due)) : null);
+    /* গাড়ির নম্বর: এই রসিদের ইনভয়েসগুলোর গাড়ি; না থাকলে কাস্টমারের সেভ করা গাড়ি। */
+    var vehicles = [];
+    function addVeh(v) { v = String(v || '').trim(); if (v && vehicles.indexOf(v) < 0) vehicles.push(v); }
+    if (sale) addVeh(sale.vehicleNo);
+    (rec.paymentParts || []).forEach(function (p) { var ps = p.saleId && DB.saleById(p.saleId); if (ps) addVeh(ps.vehicleNo); });
+    if (!vehicles.length) {
+      var vc = DB.customerById(rec.customerId || (sale && sale.customerId) || '');
+      ((vc && vc.vehicles) || []).forEach(function (v) { addVeh(v.number); });
+    }
     return '<div class="inv-wrap inv-a4 receipt-a4">' +
       '<div class="inv-head">' +
         '<div class="inv-head-left">' + logoTag('inv-logo','img/logo-print.jpg') +
@@ -389,8 +407,10 @@ function invoiceA4Bn(sale) {
       '<div class="receipt-body">' +
         '<div class="receipt-row"><span>ক্রেতার নাম</span><b>' + F.esc(name) + '</b></div>' +
         (phone ? '<div class="receipt-row"><span>মোবাইল</span><b>' + bn(F.esc(phone)) + '</b></div>' : '') +
+        (vehicles.length ? '<div class="receipt-row"><span>গাড়ির নম্বর</span><b>' + F.esc(vehicles.join(', ')) + '</b></div>' : '') +
         '<div class="receipt-row"><span>বিক্রয় চালান</span><b>' + F.esc(rec.invoiceNo || (sale && sale.invoiceNo) || '') + '</b></div>' +
         (rec.paymentParts ? '<table class="table"><tbody>' + rec.paymentParts.map(function (p) { return '<tr><td>' + F.esc(p.invoiceNo || 'বকেয়া') + '</td><td class="num">৳ ' + m(p.amount) + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
+        (rec.openingBalance && rec.openingNote ? '<div class="receipt-row"><span>নোট</span><b>' + F.esc(rec.openingNote) + '</b></div>' : '') +
         '<div class="receipt-paid"><span>এই রসিদে প্রাপ্ত টাকা</span><strong>৳ ' + m(rec.amount) + '</strong></div>' +
         (rec.pendingPrice ? '<div class="receipt-hint">দর অপেক্ষমাণ ইনভয়েস নিচের অবশিষ্ট হিসাবের বাইরে।</div>' : '') +
         (remaining === null ? '<div class="receipt-hint">চালানের কিছু মালের দাম এখনও দেওয়া হয়নি; পরে দাম বসালে অবশিষ্ট হিসাব আপডেট হবে।</div>' :

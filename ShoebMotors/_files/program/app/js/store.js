@@ -154,7 +154,16 @@ var DB = (function () {
       if (p.pricePending === undefined) p.pricePending = num(p.sellPrice) <= 0;
       if (p.buyPricePending === undefined) p.buyPricePending = num(p.buyPrice) <= 0;
     });
-    s.customers.forEach(function (c) { c.vehicles = c.vehicles || []; c.payments = c.payments || []; });
+    s.customers.forEach(function (c) {
+      c.vehicles = c.vehicles || []; c.payments = c.payments || [];
+      /* আগের বকেয়া এখন আলাদা আলাদা এন্ট্রি (তারিখ + নোট সহ), ইনভয়েসের মতো তালিকায় দেখায় ও আলাদা করে জমা নেওয়া যায়।
+         পুরোনো একক openingBalance থাকলে সেটাকে একটি এন্ট্রিতে রূপান্তর করা হয়। openingBalance = সব এন্ট্রির যোগফল। */
+      if (!Array.isArray(c.openingDues)) {
+        c.openingDues = num(c.openingBalance) > 0 ? [{ id: 'od_' + c.id, date: todayStr(c.openingBalanceUpdatedAt || c.createdAt || Date.now()),
+          amount: round2(c.openingBalance), note: '', createdAt: c.openingBalanceUpdatedAt || c.createdAt || new Date().toISOString() }] : [];
+      }
+      c.openingBalance = round2(c.openingDues.reduce(function (a, e) { return a + num(e.amount); }, 0));
+    });
     s.sales.forEach(function (sale) {
       sale.items = sale.items || []; sale.paid = num(sale.paid); sale.discount = num(sale.discount);
       /* Collection tracking was introduced after the invoice-only build.
@@ -809,7 +818,7 @@ var DB = (function () {
     var summary = Object.assign({}, parts[0]);
     summary.amount = round2(parts.reduce(function (a,r) { return a + num(r.amount); },0));
     summary.invoiceNo = parts.map(function (r) { return r.invoiceNo; }).join(', ');
-    summary.paymentParts = parts.map(function (r) { return { invoiceNo:r.invoiceNo, amount:r.amount }; });
+    summary.paymentParts = parts.map(function (r) { return { invoiceNo:r.invoiceNo, saleId:r.saleId || '', amount:r.amount }; });
     return summary;
   }
   function payCustomerDue(key, value, date) {
@@ -821,9 +830,12 @@ var DB = (function () {
     if (amount <= 0 || amount > account.total) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং মোট বকেয়ার মধ্যে হতে হবে।');
     var remaining = amount, parts = [];
     if (account.opening > 0) {
-      var openingAmount = Math.min(remaining, account.opening);
-      parts.push({openingBalance:true, saleId:'', invoiceNo:'আগের বকেয়া', amount:openingAmount});
-      remaining = round2(remaining - openingAmount);
+      openingEntries(account.customerId).forEach(function (e) {
+        if (remaining <= 0 || e.due <= 0) return;
+        var openingAmount = Math.min(remaining, e.due);
+        parts.push({openingBalance:true, openingDueId:e.id, openingNote:e.note, saleId:'', invoiceNo:'আগের বকেয়া', amount:openingAmount});
+        remaining = round2(remaining - openingAmount);
+      });
     }
     account.sales.forEach(function (sale) {
       if (remaining <= 0) return;
@@ -954,26 +966,87 @@ var DB = (function () {
     if (!Number.isFinite(amount) || amount > 999999999999) throw new Error('টাকার পরিমাণ সীমার বাইরে।');
     return round2(amount);
   }
-  function setOpeningBalance(cid, value) {
-    var c = customerById(cid), amount = balanceAmount(value);
-    if (!c) throw new Error('কাস্টমার পাওয়া যায়নি।');
-    if (amount < openingPaid(cid)) throw new Error('ইতিমধ্যে জমা নেওয়া টাকার চেয়ে আগের বকেয়া কম হতে পারবে না।');
-    c.openingBalance = amount;
+  function openingEntry(c, id) { return (c.openingDues || []).filter(function (e) { return e.id === id; })[0]; }
+  function syncOpeningTotal(c) {
+    c.openingBalance = round2((c.openingDues || []).reduce(function (a, e) { return a + num(e.amount); }, 0));
     c.openingBalanceUpdatedAt = iso();
-    save();
   }
-  function collectOpeningBalance(cid, value) {
+  /* প্রতিটি আগের-বকেয়া এন্ট্রির জমা ও বাকি। নির্দিষ্ট এন্ট্রিতে নেওয়া টাকা সেই এন্ট্রিতেই যায়;
+     পুরোনো (এন্ট্রি-চিহ্ন ছাড়া) জমা পুরোনো এন্ট্রি থেকে ক্রমানুসারে কমে। */
+  function openingEntries(cid) {
+    var c = customerById(cid);
+    if (!c) return [];
+    var list = (c.openingDues || []).map(function (e) { return { id:e.id, date:e.date, amount:round2(e.amount), note:e.note || '', createdAt:e.createdAt, paid:0 }; })
+      .sort(function (x, y) { return String(x.date).localeCompare(String(y.date)) || String(x.createdAt).localeCompare(String(y.createdAt)); });
+    var byId = {}; list.forEach(function (e) { byId[e.id] = e; });
+    var loose = 0;
+    (state.receipts || []).forEach(function (r) {
+      if (r.type !== 'collection' || r.openingBalance !== true || r.customerId !== cid) return;
+      if (r.openingDueId && byId[r.openingDueId]) byId[r.openingDueId].paid += num(r.amount);
+      else loose += num(r.amount);
+    });
+    list.forEach(function (e) {
+      var take = Math.min(loose, Math.max(0, e.amount - e.paid));
+      e.paid = round2(e.paid + take); loose = round2(loose - take);
+      e.due = round2(Math.max(0, e.amount - e.paid));
+    });
+    return list;
+  }
+  function openingDate(date) {
+    var d = String(date || '') || todayStr();
+    var parsed = new Date(d + 'T12:00:00');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !isFinite(parsed.getTime()) || todayStr(parsed) !== d) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    return d;
+  }
+  function addOpeningDue(cid, value, date, note) {
     var c = customerById(cid), amount = balanceAmount(value);
     if (!c) throw new Error('কাস্টমার পাওয়া যায়নি।');
-    if (amount <= 0 || amount > openingDue(cid)) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং আগের অবশিষ্ট বকেয়ার মধ্যে হতে হবে।');
+    if (amount <= 0) throw new Error('আগের বকেয়ার পরিমাণ শূন্যের বেশি হতে হবে।');
+    var e = { id: uid('od'), date: openingDate(date), amount: amount, note: String(note || '').trim(), createdAt: iso() };
+    c.openingDues = c.openingDues || [];
+    c.openingDues.push(e);
+    syncOpeningTotal(c);
+    save();
+    return e;
+  }
+  function updateOpeningDue(cid, id, value, date, note) {
+    var c = customerById(cid), amount = balanceAmount(value);
+    var e = c && openingEntry(c, id);
+    if (!e) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
+    var paid = (openingEntries(cid).filter(function (x) { return x.id === id; })[0] || {}).paid || 0;
+    if (amount <= 0) throw new Error('আগের বকেয়ার পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (amount < paid) throw new Error('এই বকেয়া থেকে ইতিমধ্যে ' + round2(paid) + ' টাকা জমা হয়েছে; এর চেয়ে কম লেখা যাবে না।');
+    e.amount = amount; e.date = openingDate(date); e.note = String(note || '').trim(); e.updatedAt = iso();
+    syncOpeningTotal(c);
+    save();
+    return e;
+  }
+  function deleteOpeningDue(cid, id) {
+    var c = customerById(cid), e = c && openingEntry(c, id);
+    if (!e) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
+    var info = openingEntries(cid).filter(function (x) { return x.id === id; })[0] || {};
+    if (info.paid > 0.009) throw new Error('এই বকেয়া থেকে টাকা জমা হয়েছে, তাই মুছে ফেলা যাবে না। আগে জমার এন্ট্রি বাতিল করুন।');
+    archiveDeleted('opening-due', (c.nameBn || c.name || 'কাস্টমার') + ' — আগের বকেয়া', { customerId: c.id, entry: e }, { amount: num(e.amount), date: e.date });
+    c.openingDues = c.openingDues.filter(function (x) { return x.id !== id; });
+    syncOpeningTotal(c);
+    save();
+    return true;
+  }
+  function collectOpeningDue(cid, id, value, date, note) {
+    var c = customerById(cid), amount = balanceAmount(value);
+    var info = openingEntries(cid).filter(function (x) { return x.id === id; })[0];
+    if (!c || !info) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
+    if (amount <= 0 || amount > info.due + 0.01) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং এই বকেয়ার বাকির মধ্যে হতে হবে।');
+    if (amount > info.due) amount = info.due;
+    var d = openingDate(date);
     var rec = { id: uid('col'), no: 'COL-' + String(nextNo('payment')).padStart(5, '0'),
-      type: 'collection', openingBalance: true, saleId: '', invoiceNo: 'আগের বকেয়া',
-      customerId: cid, customerName: c.nameBn || c.name || '', amount: amount,
-      date: iso(), createdAt: iso(), note: 'আগের বকেয়া আদায়' };
+      type: 'collection', openingBalance: true, openingDueId: id, openingNote: info.note, saleId: '', invoiceNo: 'আগের বকেয়া',
+      customerId: cid, customerName: c.nameBn || c.name || '', customerPhone: c.phone || '', amount: amount,
+      date: new Date(d + 'T12:00:00').toISOString(), createdAt: iso(), note: String(note || '').trim() || 'আগের বকেয়া আদায়' };
     state.receipts = state.receipts || [];
     state.receipts.push(rec);
-    save();
-    return rec;
+    var saved = save();
+    return { saved: saved, receipt: rec };
   }
 
   function customerBalance(cid) {
@@ -1111,7 +1184,7 @@ round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
     on: on, emit: emit, fixText: fixText, repairText: repairText,
     get fixedTexts() { return fixedTexts; },
     productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
-    openingPaid: openingPaid, openingDue: openingDue, setOpeningBalance: setOpeningBalance, collectOpeningBalance: collectOpeningBalance,
+    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, updateOpeningDue: updateOpeningDue, deleteOpeningDue: deleteOpeningDue, collectOpeningDue: collectOpeningDue,
     customerBalance: customerBalance, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
     salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
