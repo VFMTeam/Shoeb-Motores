@@ -107,8 +107,23 @@ var Dashboard = (function () {
     var mr = monthRange();
     var monthList = DB.salesInRange(mr.from, mr.to);
     var mSales = sum(monthList, function (s) { return s.total; });
-    setDashboardMoney('kpiMonthSales', mSales);
-    document.getElementById('kpiMonthCount').textContent = monthList.length;
+    /* --- আজকের সংক্ষিপ্ত হিসাব --- */
+    document.getElementById('kpiTodayPcs').textContent = F.qty(pcs(todayList)) + ' পিস';
+    setDashboardMoney('kpiTodayDiscount', sum(todayList, function (s) { return s.discount; }));
+    setDashboardMoney('kpiTodayNewDue', sum(finalToday, function (s) { return DB.trueDue(s); }));
+    /* আজ নেওয়া টাকার মধ্যে আগের দিনের ইনভয়েস বা আগের বকেয়ার অংশ */
+    setDashboardMoney('kpiTodayOldCollected', sum(todayCollections, function (r) {
+      if (r.openingBalance) return r.amount;
+      var rs = r.saleId && DB.saleById(r.saleId);
+      return rs && DB.todayStr(rs.date) < today ? r.amount : 0;
+    }));
+    document.getElementById('kpiTodayNewCustomers').textContent = DB.state.customers.filter(function (c) { return c.createdAt && DB.todayStr(c.createdAt) === today; }).length + ' জন';
+    var itemQty = {};
+    todayList.forEach(function (s) { (s.items || []).forEach(function (i) { var k = i.name || ''; if (k) itemQty[k] = F.num(itemQty[k]) + F.num(i.qty); }); });
+    var topName = Object.keys(itemQty).sort(function (a, b) { return itemQty[b] - itemQty[a]; })[0];
+    var topEl = document.getElementById('kpiTodayTopItem');
+    topEl.textContent = topName ? topName + ' ×' + F.qty(itemQty[topName]) : '—';
+    topEl.title = topEl.textContent;
     document.getElementById('kpiMonthInv').textContent = monthList.length;
     document.getElementById('kpiMonthInvSub').textContent = F.qty(pcs(monthList)) + ' পিস বিক্রি';
 
