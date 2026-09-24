@@ -353,6 +353,17 @@ var Customers = (function () {
     var c = DB.customerById(id);
     if (!c) { UI.toast('কাস্টমার খুঁজে পাওয়া যায়নি।', 'bad'); App.show('customers'); return; }
     App.show('customer');
+    renderProfile(c);
+  }
+
+  /* Re-draw the open profile in place (after a payment etc.) without resetting scroll/history. */
+  function refresh() {
+    var c = currentId && DB.customerById(currentId);
+    if (c) renderProfile(c);
+  }
+
+  function renderProfile(c) {
+    var id = c.id;
     var st = DB.customerStats(id);
 
     document.getElementById('cpName').textContent = c.nameBn || c.name;
@@ -403,7 +414,15 @@ var Customers = (function () {
 
     var sales = DB.state.sales.filter(function (s) { return s.customerId === id; })
       .sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+    var invoiceDueTotal = 0;
     var rows = sales.map(function (s) {
+      var tracked = s.collectionTracking === true;
+      var pending = DB.saleHasPending(s);
+      var due = tracked && !pending ? DB.trueDue(s) : 0;
+      invoiceDueTotal += due;
+      var canPay = tracked && (pending || due > 0.009);
+      var dueCell = pending ? '<span class="pend">দর অপেক্ষমাণ</span>' :
+        (due > 0.009 ? '<b class="pend">' + F.money(due) + '</b>' : '<span class="muted">পরিশোধিত</span>');
       var itemsTxt = s.items.map(function (i) {
         var line = F.esc(i.name) + ' ×' + i.qty + ' · ';
         if (DB.itemPending(i)) line += '<span class="pend">দর ঠিক হয়নি</span>';
@@ -417,16 +436,29 @@ var Customers = (function () {
         '<td class="num">' + F.money(s.subTotal) + '</td>' +
         '<td class="num">' + (F.num(s.discount) ? F.money(s.discount) : '—') + '</td>' +
         '<td class="num"><b>' + F.money(s.total) + '</b></td>' +
-        '<td><div class="row-actions"><button class="btn small" data-inv="' + s.id + '">ইনভয়েস</button>' +
-        (DB.saleHasPending(s) ? '<button class="btn small" data-price="' + s.id + '">দর বসান</button>' : '') +
+        '<td class="num">' + (pending ? '—' : F.money(s.paid)) + '</td>' +
+        '<td class="num">' + dueCell + '</td>' +
+        '<td><div class="row-actions">' +
+        (canPay ? '<button class="btn small primary" data-pay-inv="' + s.id + '">টাকা জমা</button>' : '') +
+        '<button class="btn small" data-inv="' + s.id + '">ইনভয়েস</button>' +
+        (pending ? '<button class="btn small" data-price="' + s.id + '">দর বসান</button>' : '') +
         '</div></td></tr>';
     });
-    document.querySelector('#cpSales tbody').innerHTML = rows.length ? rows.join('') : UI.emptyRow(7, 'এখনো কোনো কেনার হিসাব নেই।');
+    document.querySelector('#cpSales tbody').innerHTML = rows.length ? rows.join('') : UI.emptyRow(9, 'এখনো কোনো কেনার হিসাব নেই।');
 
-    document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total);
+    document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total) + ' · ইনভয়েসে বাকি: ' + F.money(invoiceDueTotal);
+    var account = DB.duePaymentAccount('id:' + id);
+    var payAllBtn = document.getElementById('cpPayDueBtn');
+    if (payAllBtn) {
+      payAllBtn.hidden = account.total <= 0.009;
+      payAllBtn.textContent = 'বকেয়া জমা (' + F.money(account.total) + ')';
+    }
 
     document.querySelector('#cpSales tbody').querySelectorAll('[data-inv]').forEach(function (b) {
       b.onclick = function () { UI.openInvoice(b.getAttribute('data-inv')); };
+    });
+    document.querySelector('#cpSales tbody').querySelectorAll('[data-pay-inv]').forEach(function (b) {
+      b.onclick = function () { Collections.open(b.getAttribute('data-pay-inv')); };
     });
     document.querySelector('#cpSales tbody').querySelectorAll('[data-price]').forEach(function (b) {
       b.onclick = function () { if (window.Sales && Sales.setPrices) Sales.setPrices(b.getAttribute('data-price')); };
@@ -480,10 +512,11 @@ var Customers = (function () {
     document.getElementById('custProfileBack').onclick = function () { App.show('customers'); };
     document.getElementById('cpOpeningBtn').onclick = function () { openingBalanceForm(false); };
     document.getElementById('cpOpeningCollectBtn').onclick = function () { openingBalanceForm(true); };
+    document.getElementById('cpPayDueBtn').onclick = function () { if (currentId) DueList.pay('id:' + currentId); };
     document.getElementById('cpEditBtn').onclick = function () { form(currentId); };
     document.getElementById('cpAddVehicleBtn').onclick = function () { addVehicleQuick(currentId); };
     document.getElementById('cpNewSaleBtn').onclick = function () { App.show('sale'); Sale.setCustomer(currentId); };
   }
 
-  return { render: render, open: open, form: form, bind: bind, exportCsv: exportCsv, searchCustomers: searchCustomers, match: match, smartNameSuggestions: smartNameSuggestions, bindNameSuggest: bindNameSuggest };
+  return { render: render, open: open, refresh: refresh, form: form, bind: bind, exportCsv: exportCsv, searchCustomers: searchCustomers, match: match, smartNameSuggestions: smartNameSuggestions, bindNameSuggest: bindNameSuggest };
 })();

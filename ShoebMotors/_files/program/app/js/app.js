@@ -206,6 +206,7 @@ var TITLES = {
     if (currentView === 'due') DueList.render();
     if (currentView === 'dayclosing') DayClosing.render();
     if (currentView === 'customers') Customers.render();
+    if (currentView === 'customer' && Customers.refresh) Customers.refresh();
     if (currentView === 'reports') Reports.render();
     if (currentView === 'settings') Settings.fill();
   }

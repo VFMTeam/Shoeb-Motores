@@ -65,7 +65,7 @@ var DueList = (function () {
 
   function pay(key) {
     var account = DB.duePaymentAccount(key);
-    if (account.total <= 0) { UI.toast('এই হিসাবে নির্ধারিত বকেয়া নেই।', 'warn'); render(); return; }
+    if (account.total <= 0) { UI.toast('এই হিসাবে নির্ধারিত বকেয়া নেই।', 'warn'); App.refreshAll(); return; }
     var submitted = false;
     UI.modal({ title:'Paid — বকেয়া পরিশোধ',
       body:'<p><b>' + F.esc(account.name) + '</b> · মোট বকেয়া: <b>' + F.money(account.total) + '</b></p>' +
@@ -81,7 +81,7 @@ var DueList = (function () {
             var result = DB.payCustomerDue(key, document.getElementById('duePayAmount').value, document.getElementById('duePayDate').value);
           } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
           submitted = true;
-          UI.closeModal(); render();
+          UI.closeModal(); App.refreshAll();
           if (!result.saved) { UI.toast('ডেটা সেভ নিশ্চিত হয়নি। আবার Paid চাপবেন না; সেভ স্ট্যাটাস দেখুন।', 'bad', 8000); return; }
           UI.toast('পেমেন্ট সেভ হয়েছে। বকেয়া কমেছে।', 'ok');
           UI.modal({ title:'পেমেন্ট সেভ হয়েছে — রসিদ খুলবেন?',
