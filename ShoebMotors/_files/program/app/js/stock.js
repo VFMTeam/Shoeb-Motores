@@ -182,7 +182,7 @@ var Stock = (function () {
   var NA = '—';
   var TYPE_CFG = {
     'টায়ার':      { units: ['পিস'], noDesc: true,
-                    brand: ['ব্র্যান্ড', 1, ''], size: ['সাইজ', 1, ''], model: ['মডেল / প্যাটার্ন', 0, ''] },
+                    brand: ['ব্র্যান্ড', 1, ''], size: ['সাইজ', 1, ''], model: ['মডেল', 0, ''] },
     'টিউব':       { units: ['পিস'],
                     brand: ['ব্র্যান্ড', 0, ''], size: ['সাইজ', 1, ''], model: null },
     'ব্যাটারি':    { units: ['পিস'],
@@ -268,7 +268,6 @@ var Stock = (function () {
       '<label><span class="lbl" id="pfQtyLbl">পরিমাণ *</span><input id="pfQty" type="number" min="0" required value="' + (isNew ? '1' : p.qty) + '"></label>' +
       '<label><span class="lbl" id="pfBuyLbl">ক্রয়মূল্য</span><input id="pfBuy" type="number" step="0.01" min="0" value="' + F.esc(curBuy) + '"></label>' +
       '<label><span class="lbl" id="pfSellLbl">বিক্রয়মূল্য</span><input id="pfSell" type="number" step="0.01" min="0" value="' + F.esc(curSell) + '"></label>' +
-      '<label>সম্ভাব্য বিক্রয় মোট<input id="pfTotal" type="text" readonly value="0.00"></label>' +
       '<label>কম স্টকের সীমা<input id="pfLowStock" type="number" step="1" min="0" value="' + (isNew ? (F.num(DB.state.settings.lowStockLevel) || 2) : F.num(p.lowStock)) + '"></label>' +
       (isNew ? supplierFields('pf') : '') +
       '</div>' +
