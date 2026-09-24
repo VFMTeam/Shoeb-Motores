@@ -1091,8 +1091,39 @@ var DB = (function () {
     return (state.supplierPayments || []).filter(function (r) { return r.supplierId === id; })
       .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)); });
   }
+  /* সাপ্লায়ারের আগের বাকি (পুরোনো খাতা থেকে) — প্রতি সাপ্লায়ারে একবারই যোগ হয়, পরে শুধু বদলানো যায়। */
+  function checkSupplierOpening(id, value, date) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    if (!sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if ((sup.openingDues || []).length) throw new Error('এই সাপ্লায়ারের আগের বাকি আগেই যোগ করা হয়েছে।');
+    if (amount <= 0) throw new Error('আগের বাকির পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    return amount;
+  }
+  function addSupplierOpening(id, value, date, note) {
+    var amount = checkSupplierOpening(id, value, date), sup = supplierById(id);
+    var e = { id: uid('sod'), date: String(date), amount: amount, note: String(note || '').trim(), createdAt: iso() };
+    sup.openingDues = [e];
+    save();
+    return e;
+  }
+  function updateSupplierOpening(id, entryId, value, date, note) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    var e = sup && (sup.openingDues || []).filter(function (x) { return x.id === entryId; })[0];
+    if (!e) throw new Error('আগের বাকির এন্ট্রি পাওয়া যায়নি।');
+    if (amount <= 0) throw new Error('আগের বাকির পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    e.amount = amount; e.date = String(date); e.note = String(note || '').trim(); e.updatedAt = iso();
+    save();
+    return e;
+  }
   function supplierStats(id) {
+    var sup = supplierById(id);
     var purchases = supplierPurchases(id), payments = supplierPaymentsOf(id);
+    ((sup && sup.openingDues) || []).forEach(function (e) {
+      purchases.push({ opening: true, entryId: e.id, date: e.date, product: '', unit: '', qty: 0, buyPrice: 0, total: round2(e.amount), note: e.note || '' });
+    });
+    purchases.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
     var total = round2(purchases.reduce(function (a, x) { return a + x.total; }, 0));
     var paid = round2(payments.reduce(function (a, r) { return a + num(r.amount); }, 0));
     var last = purchases.length ? purchases[0].date : '';
@@ -1256,7 +1287,7 @@ round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
     get fixedTexts() { return fixedTexts; },
     productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
     openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, collectOpeningDue: collectOpeningDue,
-    customerBalance: customerBalance, supplierById: supplierById, saveSupplier: saveSupplier, supplierStats: supplierStats, addSupplierPayment: addSupplierPayment, removeSupplierPayment: removeSupplierPayment, customerStats: customerStats, productStats: productStats,
+    customerBalance: customerBalance, supplierById: supplierById, saveSupplier: saveSupplier, supplierStats: supplierStats, checkSupplierOpening: checkSupplierOpening, addSupplierOpening: addSupplierOpening, updateSupplierOpening: updateSupplierOpening, addSupplierPayment: addSupplierPayment, removeSupplierPayment: removeSupplierPayment, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
     salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
     receiptsInRange: receiptsInRange, collectionsInRange: collectionsInRange,

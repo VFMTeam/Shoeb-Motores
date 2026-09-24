@@ -300,9 +300,7 @@ var Reports = (function () {
       b.onclick = function () {
         var dd = b.getAttribute('data-day');
         document.getElementById('salesSearch').value = '';
-        document.getElementById('salesFrom').value = dd;
-        document.getElementById('salesTo').value = dd;
-        document.getElementById('salesQuick').value = '';
+        document.getElementById('salesDay').value = dd;
         App.show('sales');
       };
     });

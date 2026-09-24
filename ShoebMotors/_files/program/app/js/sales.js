@@ -3,29 +3,18 @@ var Sales = (function () {
   var lastFiltered = [];
   var salesPage = 1, PAGE_SIZE = 50;
 
+  /* একটাই তারিখ; খালি থাকলে সব ইনভয়েস */
   function currentFilters() {
     return {
       q: (document.getElementById('salesSearch').value || '').trim(),
-      from: document.getElementById('salesFrom').value,
-      to: document.getElementById('salesTo').value,
-      day: document.getElementById('salesDay').value,
-      quick: document.getElementById('salesQuick').value
+      day: document.getElementById('salesDay').value
     };
   }
 
-  function applyQuick(f) {
-    if (f.quick === 'today') { f.from = F.today(); f.to = F.today(); }
-    else if (f.quick === 'week') { f.from = F.addDays(F.today(), -6); f.to = F.today(); }
-    else if (f.quick === 'month') { f.from = F.startOfMonth(); f.to = F.today(); }
-    return f;
-  }
-
   function filtered() {
-    var f = applyQuick(currentFilters());
+    var f = currentFilters();
     var list = DB.state.sales.slice();
-    if (f.day) { f.from = f.day; f.to = f.day; }
-    if (f.from) list = list.filter(function (s) { return DB.todayStr(s.date) >= f.from; });
-    if (f.to) list = list.filter(function (s) { return DB.todayStr(s.date) <= f.to; });
+    if (f.day) list = list.filter(function (s) { return DB.todayStr(s.date) === f.day; });
     if (f.q) {
       var q = f.q.toLowerCase();
       list = list.filter(function (s) {
@@ -79,33 +68,9 @@ var Sales = (function () {
     if (salesPage > totalPages) salesPage = totalPages;
     if (salesPage < 1) salesPage = 1;
     var pageList = list.slice((salesPage - 1) * PAGE_SIZE, salesPage * PAGE_SIZE);
-    var f = applyQuick(currentFilters());
-    if (f.day) { f.from = f.day; f.to = f.day; }
+    var f = currentFilters();
     var range = document.getElementById('salesRangeSummary');
-    var rangeText = 'সব সময়ের ইনভয়েস';
-    if (f.from && f.to && f.from === f.to) rangeText = F.d(f.from) + ' — ' + list.length + ' টি ইনভয়েস';
-    else if (f.quick === 'week') rangeText = 'শেষ ৭ দিন — ' + list.length + ' টি ইনভয়েস';
-    else if (f.quick === 'month') rangeText = 'এই মাস — ' + list.length + ' টি ইনভয়েস';
-    else if (f.from || f.to) rangeText = (f.from ? F.d(f.from) : 'শুরু') + ' থেকে ' + (f.to ? F.d(f.to) : 'আজ') + ' — ' + list.length + ' টি ইনভয়েস';
-    else rangeText += ' — ' + list.length + ' টি';
-    if (range) range.innerHTML = '<b>' + rangeText + '</b>';
-
-    var dayMap = {};
-    list.forEach(function (s) { var d = DB.todayStr(s.date); dayMap[d] = (dayMap[d] || 0) + 1; });
-    var dayBox = document.getElementById('salesDayBreakdown');
-    if (dayBox) {
-      var days = Object.keys(dayMap).sort().reverse().slice(0, 31);
-      dayBox.innerHTML = days.length > 1 ? days.map(function (d) {
-        return '<button class="day-chip" data-day="' + d + '">' + F.d(d) + ' · <b>' + dayMap[d] + '</b></button>';
-      }).join('') : '';
-      dayBox.querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () {
-        salesPage = 1;
-        document.getElementById('salesDay').value = b.getAttribute('data-day');
-        document.getElementById('salesQuick').value = '';
-        document.getElementById('salesFrom').value = ''; document.getElementById('salesTo').value = '';
-        render();
-      }; });
-    }
+    if (range) range.innerHTML = '<b>' + (f.day ? F.d(f.day) : 'সব ইনভয়েস') + ' — ' + list.length + ' টি</b>';
 
     var tb = document.querySelector('#salesTable tbody');
     tb.innerHTML = pageList.length ? pageList.map(function (s) {
@@ -220,29 +185,11 @@ var Sales = (function () {
 
   function bind() {
     ['salesSearch'].forEach(function (id) { document.getElementById(id).oninput = UI.debounce(function () { salesPage = 1; render(); }, 180); });
-    ['salesDay', 'salesFrom', 'salesTo', 'salesQuick'].forEach(function (id) {
-      document.getElementById(id).onchange = function () {
-        salesPage = 1;
-        if (id === 'salesQuick' && this.value) {
-          document.getElementById('salesDay').value = '';
-          document.getElementById('salesFrom').value = '';
-          document.getElementById('salesTo').value = '';
-        }
-        if (id === 'salesDay' && this.value) {
-          document.getElementById('salesQuick').value = '';
-          document.getElementById('salesFrom').value = '';
-          document.getElementById('salesTo').value = '';
-        }
-        render();
-      };
-    });
+    document.getElementById('salesDay').onchange = function () { salesPage = 1; render(); };
     document.getElementById('salesClearFilters').onclick = function () {
       salesPage = 1;
       document.getElementById('salesSearch').value = '';
       document.getElementById('salesDay').value = '';
-      document.getElementById('salesFrom').value = '';
-      document.getElementById('salesTo').value = '';
-      document.getElementById('salesQuick').value = '';
       render();
     };
     document.getElementById('exportSalesBtn').onclick = exportCsv;

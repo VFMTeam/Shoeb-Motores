@@ -61,11 +61,20 @@ var Suppliers = (function () {
       kpi('green', 'দিয়েছি', F.money(st.paid)) +
       kpi('', st.due < -0.009 ? 'অগ্রিম দেওয়া' : 'বাকি (দিতে হবে)', F.money(Math.abs(st.due)));
     document.querySelector('#spPurchases tbody').innerHTML = st.purchases.length ? st.purchases.map(function (x) {
+      if (x.opening) {
+        return '<tr><td>' + F.d(x.date) + '</td><td><span class="tag warn opening-tag">আগের বাকি</span>' + (x.note ? '<div class="cell-sub">' + F.esc(x.note) + '</div>' : '') + '</td>' +
+          '<td class="num">—</td><td class="num">—</td><td class="num"><b>' + F.money(x.total) + '</b></td>' +
+          '<td><div class="row-actions"><button class="btn small ghost" data-sop-edit="' + F.esc(x.entryId) + '">বদলান</button></div></td></tr>';
+      }
       return '<tr><td>' + F.d(x.date) + '</td><td>' + F.esc(x.product) + (x.note ? '<div class="cell-sub">' + F.esc(x.note) + '</div>' : '') + '</td>' +
         '<td class="num">' + F.qty(x.qty) + ' ' + F.esc(x.unit) + '</td>' +
         '<td class="num">' + (x.buyPrice > 0 ? F.money(x.buyPrice) : '—') + '</td>' +
-        '<td class="num"><b>' + F.money(x.total) + '</b></td></tr>';
-    }).join('') : '<tr class="empty-row"><td colspan="5">এই সাপ্লায়ার থেকে এখনো কোনো মাল নেওয়া হয়নি।</td></tr>';
+        '<td class="num"><b>' + F.money(x.total) + '</b></td><td></td></tr>';
+    }).join('') : '<tr class="empty-row"><td colspan="6">এই সাপ্লায়ার থেকে এখনো কোনো মাল নেওয়া হয়নি।</td></tr>';
+    document.querySelectorAll('#spPurchases [data-sop-edit]').forEach(function (b) {
+      b.onclick = function () { openingForm(s.id, b.getAttribute('data-sop-edit')); };
+    });
+    document.getElementById('spOpeningBtn').hidden = (s.openingDues || []).length > 0;
     document.querySelector('#spPayments tbody').innerHTML = st.payments.length ? st.payments.map(function (r) {
       return '<tr><td>' + F.d(r.date) + '</td><td>' + (F.esc(r.note) || '—') + '</td><td class="num"><b>' + F.money(r.amount) + '</b></td>' +
         '<td><div class="row-actions"><button class="btn small ghost" data-spay-del="' + F.esc(r.id) + '">বাতিল</button></div></td></tr>';
@@ -74,6 +83,39 @@ var Suppliers = (function () {
       b.onclick = function () { removePayment(b.getAttribute('data-spay-del')); };
     });
     if (window.Lang) Lang.apply();
+  }
+
+  /* ------- আগের বাকি: যোগ (একবার, নিশ্চিত করে) / বদলান ------- */
+  function openingForm(id, entryId, draft) {
+    var s = DB.supplierById(id);
+    if (!s) return;
+    var e = entryId ? (s.openingDues || []).filter(function (x) { return x.id === entryId; })[0] : null;
+    var v = draft || (e ? { amount: String(e.amount), date: e.date, note: e.note || '' } : { amount: '', date: F.today(), note: '' });
+    UI.modal({ title: e ? 'আগের বাকি বদলান' : 'আগের বাকি যোগ করুন',
+      body: '<div class="grid2"><label>টাকার পরিমাণ<input id="sodAmount" inputmode="decimal" autocomplete="off" value="' + F.esc(v.amount) + '"></label>' +
+        '<label>তারিখ<input id="sodDate" type="date" value="' + F.esc(v.date) + '"></label></div>' +
+        '<label>নোট<input id="sodNote" autocomplete="off" value="' + F.esc(v.note) + '"></label>',
+      buttons: [{ label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
+        { label: 'সেভ করুন', cls: 'primary', onClick: function () {
+          var d = { amount: document.getElementById('sodAmount').value, date: document.getElementById('sodDate').value, note: document.getElementById('sodNote').value };
+          if (e) {
+            try { DB.updateSupplierOpening(id, e.id, d.amount, d.date, d.note); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+            UI.closeModal(); App.refreshAll(); UI.toast('আগের বাকি বদল হয়েছে।', 'ok');
+            return;
+          }
+          var amount;
+          try { amount = DB.checkSupplierOpening(id, d.amount, d.date); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+          UI.confirmDialog({ title: 'আগের বাকি যোগ করবেন?',
+            message: '<b>' + F.esc(s.name) + '</b> — <b>' + F.money(amount) + '</b> আগের বাকি যোগ হবে। একবার যোগ করলে এই সাপ্লায়ারের জন্য আর আগের বাকি যোগ করা যাবে না।',
+            confirmText: 'হ্যাঁ, যোগ করুন' })
+            .then(function (ok) {
+              if (!ok) { openingForm(id, null, d); return; }
+              try { DB.addSupplierOpening(id, d.amount, d.date, d.note); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
+              App.refreshAll(); UI.toast('আগের বাকি যোগ হয়েছে।', 'ok');
+            });
+        } }],
+      onOpen: function (root) { root.querySelector('#sodAmount').focus(); }
+    });
   }
 
   /* ------- ফর্ম: নতুন / বদলান ------- */
@@ -138,6 +180,7 @@ var Suppliers = (function () {
     document.getElementById('supProfileBack').onclick = function () { App.show('suppliers'); };
     document.getElementById('spPayBtn').onclick = function () { if (currentId) pay(currentId); };
     document.getElementById('spEditBtn').onclick = function () { if (currentId) form(currentId); };
+    document.getElementById('spOpeningBtn').onclick = function () { if (currentId) openingForm(currentId); };
   }
 
   return { render: render, refresh: refresh, open: open, bind: bind, form: form, pay: pay };

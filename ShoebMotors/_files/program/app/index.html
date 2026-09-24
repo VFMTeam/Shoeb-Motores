@@ -22,7 +22,7 @@
   if(m)m.setAttribute('content',r==='dark'?'#090e14':'#f5f6f7');
 })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=20260924-suppliers">
+<link rel="stylesheet" href="css/style.css?v=20260924-report-cards">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -363,19 +363,11 @@
     <div class="card">
       <div class="row wrap filters">
         <input id="salesSearch" class="grow">
-        <label class="filter-label">একদিন<input type="date" id="salesDay"></label>
-        <select id="salesQuick" title="দিন / সপ্তাহ / মাস অনুযায়ী দেখুন">
-          <option value="">সব সময়</option>
-          <option value="today">আজ</option>
-          <option value="week">শেষ ৭ দিন</option>
-          <option value="month">এই মাস</option>
-        </select>
-        <details class="advanced-filter"><summary>আরও তারিখ</summary><div class="row"><input type="date" id="salesFrom"><span>—</span><input type="date" id="salesTo"></div></details>
-        <button class="btn ghost small" id="salesClearFilters">রিসেট</button>
+        <input type="date" id="salesDay" aria-label="তারিখ">
+        <button class="btn ghost small" id="salesClearFilters">সব ইনভয়েস</button>
       </div>
       <div class="invoice-range-summary" id="salesRangeSummary"></div>
       <div class="row wrap totals" id="salesTotals"></div>
-      <div class="day-counts" id="salesDayBreakdown"></div>
       <div class="table-scroll">
         <table class="table" id="salesTable">
           <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>ক্রেতা</th><th>আইটেম</th><th class="num">মোট</th><th class="num">দর</th><th></th></tr></thead>
@@ -604,6 +596,7 @@
         <div><h1 id="spName">সাপ্লায়ার</h1><p class="muted small" id="spMeta"></p></div>
       </div>
       <div class="row">
+        <button class="btn" id="spOpeningBtn">＋ আগের বাকি</button>
         <button class="btn" id="spEditBtn">তথ্য বদলান</button>
         <button class="btn primary" id="spPayBtn">টাকা দিন</button>
       </div>
@@ -613,7 +606,7 @@
       <div class="card">
         <div class="card-head"><h3>কেনা মাল</h3></div>
         <div class="table-scroll"><table class="table compact" id="spPurchases">
-          <thead><tr><th>তারিখ</th><th>পণ্য</th><th class="num">পরিমাণ</th><th class="num">দর</th><th class="num">মোট</th></tr></thead>
+          <thead><tr><th>তারিখ</th><th>পণ্য</th><th class="num">পরিমাণ</th><th class="num">দর</th><th class="num">মোট</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
       </div>
@@ -675,10 +668,10 @@
 
       <div class="card">
         <div class="card-head"><h3>লাভ-ক্ষতির হিসাব</h3></div>
-        <table class="table" id="repPL"></table>
+        <div class="table-scroll"><table class="table" id="repPL"></table></div>
       </div>
 
-      <div class="card" id="repTopCustomersCard">
+      <div class="card report-wide" id="repTopCustomersCard">
         <div class="card-head">
           <h3 id="repTopCustomersTitle">শীর্ষ ১০ কাস্টমার</h3>
           <select id="repCustomerSort" aria-label="কাস্টমার সাজান">
@@ -689,12 +682,12 @@
         <div class="table-scroll"><table class="table compact" id="repTopCustomers"></table></div>
       </div>
 
-      <div class="card">
+      <div class="card report-wide">
         <div class="card-head"><h3>দিন অনুযায়ী বিক্রি</h3></div>
         <div class="table-scroll"><table class="table compact" id="repDaily"></table></div>
       </div>
 
-      <div class="card">
+      <div class="card report-wide">
         <div class="card-head">
           <h3>পণ্য অনুযায়ী বিক্রি</h3>
           <select id="repProductSort" aria-label="পণ্য সাজান">
@@ -827,22 +820,22 @@
 <!-- ============ PRINT AREA ============ -->
 <div id="printRoot" class="print-root"></div>
 
-<script src="js/store.js?v=20260924-suppliers"></script>
+<script src="js/store.js?v=20260924-sup-opening"></script>
 <script src="js/cloud.js?v=1215-20260920"></script>
 <script src="js/theme.js?v=1215-20260920"></script>
-<script src="js/lang.js?v=20260924-suppliers"></script>
+<script src="js/lang.js?v=20260924-sup-opening"></script>
 <script src="js/format.js?v=1215-20260920"></script>
 <script src="js/ui.js?v=20260924-opening-entries"></script>
 <script src="js/customers.js?v=20260924-no-opening-delete"></script>
-<script src="js/suppliers.js?v=20260924-suppliers"></script>
+<script src="js/suppliers.js?v=20260924-sup-opening"></script>
 <script src="js/stock.js?v=20260924-suppliers"></script>
 <script src="js/sale.js?v=20260924-walkin-cash"></script>
-<script src="js/sales.js?v=20260924-suppliers"></script>
+<script src="js/sales.js?v=20260924-report-cards"></script>
 <script src="js/collections.js?v=1221-20260923"></script>
 <script src="js/due.js?v=20260924-cust-due"></script>
 <script src="js/dayclosing.js?v=1221-20260923"></script>
 <script src="js/dashboard.js?v=20260924-stock-report"></script>
-<script src="js/reports.js?v=20260924-no-facts"></script>
+<script src="js/reports.js?v=20260924-report-cards"></script>
 <script src="js/settings.js?v=1215-20260920"></script>
 <script src="js/app.js?v=20260924-suppliers"></script>
 <script>
