@@ -86,6 +86,14 @@ var Dashboard = (function () {
     var kd = document.getElementById('kpiDueReminder'); if (kd) kd.textContent = remList.length;
     var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = remList.length ? 'মেয়াদ পার হওয়া বাকি — টাকা তুলুন' : 'কোনো বাকি রিমাইন্ডার নেই';
 
+    /* আজকের কার্ড: আজকের বিলে কত বাকি রইল, আর আজ আগের দিনের ইনভয়েস / আগের বকেয়া থেকে কত পেলাম */
+    setDashboardMoney('kpiTodayNewDue', sum(finalToday, function (s) { return DB.trueDue(s); }));
+    setDashboardMoney('kpiTodayOldCollected', sum(todayCollections, function (r) {
+      if (r.openingBalance) return r.amount;
+      var rs = r.saleId && DB.saleById(r.saleId);
+      return rs && DB.todayStr(rs.date) < today ? r.amount : 0;
+    }));
+
     /* আজকের কার্ড: যাদের টাকা দেওয়ার তারিখ পার হয়েছে, আর সব কাস্টমারের মোট পাওনা */
     var overdueTotal = DB.round2(remList.reduce(function (a, x) { return a + x.due; }, 0));
     var ov = document.getElementById('kpiOverdue');
