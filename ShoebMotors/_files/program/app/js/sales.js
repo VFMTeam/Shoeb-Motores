@@ -70,14 +70,14 @@ var Sales = (function () {
     var pageList = list.slice((salesPage - 1) * PAGE_SIZE, salesPage * PAGE_SIZE);
     var f = currentFilters();
     var range = document.getElementById('salesRangeSummary');
-    if (range) range.innerHTML = '<b>' + (f.day ? F.d(f.day) : 'সব ইনভয়েস') + ' — ' + list.length + ' টি</b>';
+    if (range) range.innerHTML = '<b>' + (f.day ? F.d(f.day) : ((window.Lang && Lang.isEn()) ? 'All invoices' : 'সব ইনভয়েস')) + ' — ' + list.length + ((window.Lang && Lang.isEn()) ? '' : ' টি') + '</b>';
 
     var tb = document.querySelector('#salesTable tbody');
     tb.innerHTML = pageList.length ? pageList.map(function (s) {
       return '<tr>' +
         '<td><b>' + F.esc(s.invoiceNo) + '</b></td>' +
         '<td>' + F.d(s.date) + '<div class="cell-sub">' + F.time(s.date) + '</div></td>' +
-        '<td><div class="cell-main">' + F.esc(Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন') + '</div><div class="cell-sub mono">' + (s.vehicleNo ? F.esc(s.vehicleNo) : F.esc(s.customerPhone || '')) + '</div></td>' +
+        '<td><div class="cell-main">' + F.esc(Lang.custName(s) || 'ওয়াক-ইন') + '</div><div class="cell-sub mono">' + (s.vehicleNo ? F.esc(s.vehicleNo) : F.esc(s.customerPhone || '')) + '</div></td>' +
         '<td class="tiny">' + s.items.map(function (i) { return F.esc(i.name) + ' ×' + i.qty; }).join('<br>') + '</td>' +
         '<td class="num"><b>' + F.money(s.total) + '</b>' + (F.num(s.discount) > 0 ? '<div class="cell-sub">ছাড় ' + F.money(s.discount) + '</div>' : '') + '</td>' +
         '<td class="num">' + (DB.saleHasPending(s) ? '<span class="tag warn">দর বসান</span>' : '<span class="tag ok">সম্পূর্ণ</span>') + '</td>' +
@@ -118,7 +118,7 @@ var Sales = (function () {
     s = UI.invoiceSaleView ? UI.invoiceSaleView(s) : s;
     var st = DB.state.settings;
     var lines = ['*' + st.shopName + '*', (st.address ? st.address : ''), (st.phone ? 'মোবাইল: ' + st.phone : ''), '',
-      'ইনভয়েস: ' + s.invoiceNo, 'তারিখ: ' + F.d(s.date), 'ক্রেতা: ' + (Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন'),
+      'ইনভয়েস: ' + s.invoiceNo, 'তারিখ: ' + F.d(s.date), 'ক্রেতা: ' + (Lang.custName(s) || 'ওয়াক-ইন'),
       (s.vehicleNo ? 'গাড়ির নম্বর: ' + s.vehicleNo : ''), ''].filter(function (x) { return !!x; });
     s.items.forEach(function (i) {
       lines.push('• ' + i.name + ' ×' + i.qty + ' = ' + F.money(i.total));

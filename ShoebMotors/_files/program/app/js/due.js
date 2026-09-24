@@ -17,9 +17,10 @@ var DueList = (function () {
     if (!isFinite(target) || !isFinite(now)) return F.d(dateStr) || '—';
     var days = Math.round((target - now) / 86400000);
     var label = '';
-    if (days > 0) label = '<b>⏳ আর ' + F.bn(days) + ' দিন</b>';
-    else if (days === 0) label = '<b class="pend">⏰ আজ</b>';
-    else label = '<b class="pend">⏰ ' + F.bn(Math.abs(days)) + ' দিন পার</b>';
+    var en = window.Lang && Lang.isEn();
+    if (days > 0) label = '<b>⏳ ' + (en ? days + ' days left' : 'আর ' + F.bn(days) + ' দিন') + '</b>';
+    else if (days === 0) label = '<b class="pend">⏰ ' + (en ? 'Today' : 'আজ') + '</b>';
+    else label = '<b class="pend">⏰ ' + (en ? Math.abs(days) + ' days overdue' : F.bn(Math.abs(days)) + ' দিন পার') + '</b>';
     return '<div class="cell-main">' + label + '</div><div class="cell-sub">' + F.d(dateStr) + '</div>';
   }
 
@@ -34,7 +35,7 @@ var DueList = (function () {
       if (due <= 0.009 && !pendingPrice) return;
       var k = keyFor(s), c = s.customerId ? DB.customerById(s.customerId) : null;
       if (!map[k]) map[k] = {
-        key:k, customerId:s.customerId || '', name:(c && (c.nameBn || c.name)) || saleName(s),
+        key:k, customerId:s.customerId || '', name:(c && Lang.showName(c.nameBn || c.name, c.name)) || saleName(s),
         phone:(c && c.phone) || s.customerPhone || '', address:(c && [c.addressBn, c.address].filter(Boolean).join(', ')) || '', due:0, invoiceCount:0, pendingPriceCount:0,
         latestDate:'', latestInvoice:'', latestSaleId:'', latestReference:null, earliestDate:'', reminderDate:''
       };

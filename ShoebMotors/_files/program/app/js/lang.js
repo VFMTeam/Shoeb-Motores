@@ -387,7 +387,7 @@ var Lang = (function () {
     '＋ নতুন পণ্য': '＋ New Product',
     'স্টকে এখনো কোনো পণ্য নেই।': 'No products in stock yet.',
     'কোনো পণ্য মেলেনি।': 'No products matched.',
-    'পুরো টাকা পাওয়া': 'Fully paid', 'কোনো ইনভয়েস নেই।': 'No invoices.',
+    'পুরো টাকা পাওয়া': 'Fully paid', 'কোনো ইনভয়েস নেই।': 'No invoices.', 'মূল বিল': 'Bill', 'চূড়ান্ত বিল': 'Final bill', 'মোট ছাড় দেওয়া হয়েছে': 'Total discount given', 'বাকি তালিকা দেখুন →': 'View due list →', 'সব ইনভয়েস': 'All invoices', 'প্রত্যাশিত ক্যাশ': 'Expected cash', 'প্রকৃত ক্যাশ': 'Actual cash', 'কম / বেশি': 'Short / over',
     'আংশিক টাকা': 'Partial payment',
     'আবার টাকা যোগ করা যাবে': 'More payment can be added',
     'এখনও টাকা যোগ হয়নি': 'No payment added yet',
@@ -405,6 +405,15 @@ var Lang = (function () {
 
   /* সংখ্যা/অঙ্ক সহ যেসব লেখা নিজে থেকে বানানো হয় — সেগুলোর নিয়ম */
   var RULES = [
+    /* বিলের আইটেম লাইনে পণ্যের ধরন, যেমন "IRC 3.00-17 টিউব ×1" — নাম বা ঠিকানায় হাত দেয় না */
+    [/(?<![ঀ-৿])টায়ার(?=\s*×)/g, 'Tyre'],
+    [/(?<![ঀ-৿])টায়ার জেল(?=\s*×)/g, 'Tyre gel'],
+    [/(?<![ঀ-৿])পলি ত্রিপল(?=\s*×)/g, 'Poly tarpaulin'],
+    [/(?<![ঀ-৿])মোটর অয়েল(?=\s*×)/g, 'Motor oil'],
+    [/(?<![ঀ-৿])ব্যাটারি(?=\s*×)/g, 'Battery'],
+    [/(?<![ঀ-৿])টিউব(?=\s*×)/g, 'Tube'],
+    [/(?<![ঀ-৿])রিম(?=\s*×)/g, 'Rim'],
+    [/(?<![ঀ-৿])রশি(?=\s*×)/g, 'Rope'],
     /* এই এন্ট্রিগুলো নিচের সাধারণ "মোট" নিয়মের আগে থাকতে হবে, নাহলে "মোট বকেয়া:"-এর
        "মোট" অংশটুকু আগেই বদলে গিয়ে বাকি অংশ বাংলায় রয়ে যায়। */
     [/মোট বকেয়া:\s*/g, 'Total due: '],
@@ -572,7 +581,7 @@ var Lang = (function () {
     [/(সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|শনিবার|রবিবার)\s*,\s*([০-৯0-9]+)\s*(জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*([০-৯0-9]+)/g,
       function (m, dw, dd, mo, yy) { return D[dw] + ', ' + dd + ' ' + D[mo] + ' ' + yy; }],
     [/([০-৯0-9]+)\s*(জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*([০-৯0-9]+)/g,
-      function (m, dd, mo, yy) { return dd + ' ' + D[mo] + ' ' + yy; }]
+      function (m, dd, mo, yy) { return dd + ' ' + D[mo] + ' ' + yy; }],
   ];
 
   var TITLE = {
@@ -758,6 +767,13 @@ var Lang = (function () {
     if (isEn() && enName && String(enName).trim()) return String(enName).trim();
     return bnName || enName || '';
   }
+  /* বিল / রসিদের কাস্টমারের নাম — কাস্টমার রেকর্ড থাকলে সেখান থেকে, যাতে English মোডে ইংরেজি নাম দেখায় */
+  function custName(o) {
+    var c = o && o.customerId && window.DB && DB.customerById ? DB.customerById(o.customerId) : null;
+    if (c) return showName(c.nameBn || c.name, c.name);
+    return showName((o && (o.customerNameBn || o.customerName)) || '', '');
+  }
 
-  return { apply: apply, refresh: refresh, bind: bind, set: set, lang: lang, isEn: isEn, translate: translate, showName: showName, dict: D };
+
+  return { apply: apply, refresh: refresh, bind: bind, set: set, lang: lang, isEn: isEn, translate: translate, showName: showName, custName: custName, dict: D };
 })();

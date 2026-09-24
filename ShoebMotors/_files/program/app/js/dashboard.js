@@ -67,7 +67,7 @@ var Dashboard = (function () {
     reminders.forEach(function (s) {
       var phoneKey = String(s.customerPhone || '').replace(/\D+/g, '');
       var key = s.customerId ? ('id:' + s.customerId) : (phoneKey ? ('ph:' + phoneKey) : ('nm:' + (s.customerNameBn || s.customerName || '')));
-      if (!remMap[key]) remMap[key] = { name: (s.customerNameBn || s.customerName || 'ওয়াক-ইন কাস্টমার'), phone: s.customerPhone || '', due: 0, date: s.dueReminderDate };
+      if (!remMap[key]) remMap[key] = { name: (Lang.custName(s) || 'ওয়াক-ইন কাস্টমার'), phone: s.customerPhone || '', due: 0, date: s.dueReminderDate };
       remMap[key].due += DB.trueDue(s);
       if (s.dueReminderDate < remMap[key].date) remMap[key].date = s.dueReminderDate;
     });
@@ -96,10 +96,11 @@ var Dashboard = (function () {
     if (dueBanner) {
       if (remList.length) {
         var remNames = remList.slice(0, 5).map(function (x) {
-          return F.esc(x.name) + (x.phone ? ' (' + F.esc(x.phone) + ')' : '') + ' — ' + moneyWithHover(x.due);
+          return F.esc(x.name) + (x.phone ? ' ' + F.esc(x.phone) : '') + ' — ' + moneyWithHover(x.due);
         }).join(' · ');
         dueBanner.hidden = false;
-        dueBanner.innerHTML = '<div><b>⚠ বাকি রিমাইন্ডার: ' + remList.length + ' জন</b><span>' + remNames + (remList.length > 5 ? ' · আরও ' + (remList.length - 5) + ' জন' : '') + '</span></div>' +
+        var en = window.Lang && Lang.isEn();
+        dueBanner.innerHTML = '<div><b>⚠ ' + (en ? 'Due reminder: ' + remList.length + ' customers' : 'বাকি রিমাইন্ডার: ' + remList.length + ' জন') + '</b><span>' + remNames + (remList.length > 5 ? (en ? ' · ' + (remList.length - 5) + ' more' : ' · আরও ' + (remList.length - 5) + ' জন') : '') + '</span></div>' +
           '<button class="btn small" id="dueReminderOpenBtn">বাকি তালিকা দেখুন →</button>';
         var dueBtn = document.getElementById('dueReminderOpenBtn');
         if (dueBtn) dueBtn.onclick = function () { App.show('due'); };

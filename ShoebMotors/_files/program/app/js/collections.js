@@ -3,7 +3,7 @@ var Collections = (function () {
   var wired = false;
 
   function saleName(s) {
-    return Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন';
+    return Lang.custName(s) || 'ওয়াক-ইন';
   }
 
   /* তারিখ খালি থাকলে: যেসব ইনভয়েসে টাকা বাকি; তারিখ দিলে: সেই দিনের সব ইনভয়েস */
@@ -95,7 +95,7 @@ var Collections = (function () {
       return '<tr>' +
         '<td>' + F.d(r.date) + '<div class="cell-sub">' + F.time(r.createdAt || r.date) + '</div></td>' +
         '<td><b>' + F.esc(r.invoiceNo || (s && s.invoiceNo) || '—') + '</b><div class="cell-sub mono">' + F.esc(r.no || '') + '</div></td>' +
-        '<td>' + F.esc(r.customerName || (s ? saleName(s) : '—')) + '</td>' +
+        '<td>' + F.esc(Lang.custName(r) || (s ? saleName(s) : '—')) + '</td>' +
         '<td class="num"><b>' + F.money(r.amount) + '</b></td>' +
         '<td class="collection-history-note">' + F.esc(r.note || '—') + '</td>' +
         '<td><div class="row-actions"><button class="btn small" data-print-collection="' + r.id + '">রসিদ</button><button class="btn small ghost" data-remove-collection="' + r.id + '">বাতিল</button></div></td>' +

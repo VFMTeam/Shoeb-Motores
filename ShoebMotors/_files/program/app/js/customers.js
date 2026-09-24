@@ -219,7 +219,7 @@ var Customers = (function () {
         '</tr>';
     }).join('') : '';
 
-    document.getElementById('custSummary').textContent = list.length + ' জন কাস্টমার';
+    document.getElementById('custSummary').textContent = (window.Lang && Lang.isEn()) ? list.length + ' customers' : list.length + ' জন কাস্টমার';
 
     var pager = document.getElementById('custPager');
     if (pager) {
@@ -364,12 +364,13 @@ var Customers = (function () {
     var id = c.id;
     var st = DB.customerStats(id);
 
-    document.getElementById('cpName').textContent = c.nameBn || c.name;
+    var en = window.Lang && Lang.isEn();
+    document.getElementById('cpName').textContent = Lang.showName(c.nameBn || c.name, c.name);
     document.getElementById('cpMeta').innerHTML = '📞 <a href="tel:' + F.esc(c.phone) + '">' + F.esc(c.phone) + '</a>' +
-      (addressText(c) ? ' · ' + F.esc(addressText(c)) : '') + ' · কাস্টমার হয়েছেন ' + F.d(c.createdAt || Date.now());
+      (addressText(c) ? ' · ' + F.esc(addressText(c)) : '') + (en ? ' · Customer since ' : ' · কাস্টমার হয়েছেন ') + F.d(c.createdAt || Date.now());
 
     document.getElementById('cpDetails').innerHTML =
-      '<tr><td class="muted">নাম</td><td>' + (F.esc(c.nameBn || c.name) || '—') + '</td></tr>' +
+      '<tr><td class="muted">নাম</td><td>' + (F.esc(Lang.showName(c.nameBn || c.name, c.name)) || '—') + '</td></tr>' +
       '<tr><td class="muted">মোবাইল</td><td class="mono">' + F.esc(c.phone) + '</td></tr>' +
       '<tr><td class="muted">ঠিকানা</td><td>' + (F.esc(addressText(c)) || '—') + '</td></tr>' +
       '<tr><td class="muted">নোট</td><td>' + (F.esc(c.note) || '—') + '</td></tr>' +
@@ -421,9 +422,9 @@ var Customers = (function () {
       var itemsTxt = s.items.map(function (i) {
         var line = F.esc(i.name) + ' ×' + i.qty + ' · ';
         if (DB.itemPending(i)) line += '<span class="pend">দর ঠিক হয়নি</span>';
-        else line += 'দর ' + F.money(i.price) + ' = ' + F.money(i.total);
+        else line += (en ? 'Rate ' : 'দর ') + F.money(i.price) + ' = ' + F.money(i.total);
         var cost = F.num(i.cost);
-        if (cost > 0) line += ' <span class="owner-only tiny muted">· ক্রয় ' + F.money(cost) + '/পিস</span>';
+        if (cost > 0) line += ' <span class="owner-only tiny muted">' + (en ? '· cost ' + F.money(cost) + '/pc' : '· ক্রয় ' + F.money(cost) + '/পিস') + '</span>';
         return line;
       }).join('<br>');
       return { date: s.date, html: '<tr><td><b>' + F.esc(s.invoiceNo) + '</b></td><td>' + F.d(s.date) + '</td>' +
@@ -457,14 +458,14 @@ var Customers = (function () {
     rows.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
     document.querySelector('#cpSales tbody').innerHTML = rows.length ? rows.map(function (r) { return r.html; }).join('') : UI.emptyRow(9, 'এখনো কোনো কেনার হিসাব নেই।');
 
-    document.getElementById('cpTotals').textContent = 'মোট কেনা: ' + F.money(st.total) + ' · মোট বাকি: ' + F.money(DB.round2(invoiceDueTotal + openingDueTotal));
+    document.getElementById('cpTotals').textContent = (en ? 'Total bought: ' : 'মোট কেনা: ') + F.money(st.total) + (en ? ' · Total due: ' : ' · মোট বাকি: ') + F.money(DB.round2(invoiceDueTotal + openingDueTotal));
     var account = DB.duePaymentAccount('id:' + id);
     var addOpeningBtn = document.getElementById('cpAddOpeningBtn');
     if (addOpeningBtn) addOpeningBtn.hidden = DB.openingEntries(id).length > 0;
     var payAllBtn = document.getElementById('cpPayDueBtn');
     if (payAllBtn) {
       payAllBtn.hidden = account.total <= 0.009;
-      payAllBtn.textContent = 'বকেয়া জমা ' + F.money(account.total);
+      payAllBtn.textContent = (en ? 'Pay due ' : 'বকেয়া জমা ') + F.money(account.total);
     }
 
     document.querySelector('#cpSales tbody').querySelectorAll('[data-inv]').forEach(function (b) {
