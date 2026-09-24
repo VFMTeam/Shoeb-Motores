@@ -251,7 +251,6 @@ var Reports = (function () {
       });
     });
     var prodList = Object.keys(byProd).map(function (k) { return byProd[k]; });
-    var totRevAll = prodList.reduce(function (a, p) { return a + p.rev; }, 0) || 1;
 
     var prodSortEl = document.getElementById('repProductSort');
     if (prodSortEl && prodSortEl.value) productSort = prodSortEl.value;

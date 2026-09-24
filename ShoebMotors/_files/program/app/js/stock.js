@@ -1,7 +1,6 @@
 /* ================= stock.js — stock (type-wise forms, v12.10), buy price (owner), purchases ================= */
 var Stock = (function () {
   var stockPage = 1, PAGE_SIZE = 50;
-  var VEHICLES = ['মোটরসাইকেল', 'কার / জিপ', 'সিএনজি / অটো', 'ইজি বাইক', 'লাগোনা / পিকআপ', 'বাস', 'ট্রাক', 'সাইকেল', 'অন্যান্য'];
   var TYPES = ['টায়ার', 'টিউব', 'ব্যাটারি', 'মোটর অয়েল', 'মোটর পার্টস', 'রশি', 'টায়ার জেল', 'পলিথিন', 'পলি ত্রিপল', 'রিম', 'অন্যান্য'];
   var UNITS = ['পিস', 'কেজি', 'ফুট', 'লিটার'];
 
@@ -290,7 +289,6 @@ var Stock = (function () {
         var ident = root.querySelector('#pfIdent');
         var unitTouched = false, firstRun = true;
         function fld(k) { return ident.querySelector('[data-f="' + k + '"]'); }
-        function val(id) { return String((root.querySelector('#' + id) || {}).value || '').trim(); }
 
         function setField(key, def, order) {
           var el = fld(key); if (!el) return;
@@ -779,7 +777,6 @@ var Stock = (function () {
     document.getElementById('stockLowOnly').onchange = function () { stockPage = 1; render(); };
     document.getElementById('stockSort').onchange = function () { stockPage = 1; render(); };
     document.getElementById('addTyreBtn').onclick = function () { form(null); };
-    var qTop = document.getElementById('quickAddStockTop'); if (qTop) qTop.onclick = quickAddStock;
     var qPage = document.getElementById('quickAddStockPage'); if (qPage) qPage.onclick = quickAddStock;
     var qDash = document.getElementById('dashQuickAddStock'); if (qDash) qDash.onclick = quickAddStock;
     var stockShareBtn = document.getElementById('stockShareBtn'); if (stockShareBtn) stockShareBtn.onclick = openStockShare;
@@ -816,5 +813,5 @@ var Stock = (function () {
     Object.keys(NEW_EN).forEach(function (k) { if (!Lang.dict[k]) Lang.dict[k] = NEW_EN[k]; });   /* আগের অনুবাদ বদলায় না */
   }
 
-  return { render: render, renderDetailStock: renderDetailStock, typeSummary: typeSummary, typeLabel: typeLabel, unitTotalsHtml: unitTotalsHtml, form: form, quickAddStock: quickAddStock, addStockForm: addStockForm, details: details, bind: bind, exportCsv: exportCsv, printFullStock: printFullStock, downloadFullStockPdf: downloadFullStockPdf, shareFullStockPdf: shareFullStockPdf, fullStockPrintHtml: fullStockPrintHtml, label: label, search: search, real: real, typePicker: typePicker, cfgFor: cfgFor, autoDesc: autoDesc, productType: productType, NA: NA, VEHICLES: VEHICLES, TYPES: TYPES, UNITS: UNITS };
+  return { render: render, renderDetailStock: renderDetailStock, typeSummary: typeSummary, typeLabel: typeLabel, unitTotalsHtml: unitTotalsHtml, form: form, quickAddStock: quickAddStock, addStockForm: addStockForm, details: details, bind: bind, exportCsv: exportCsv, printFullStock: printFullStock, downloadFullStockPdf: downloadFullStockPdf, shareFullStockPdf: shareFullStockPdf, fullStockPrintHtml: fullStockPrintHtml, label: label, search: search, real: real, typePicker: typePicker, cfgFor: cfgFor, autoDesc: autoDesc, productType: productType, NA: NA, TYPES: TYPES, UNITS: UNITS };
 })();

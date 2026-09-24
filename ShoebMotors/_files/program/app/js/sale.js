@@ -325,7 +325,6 @@ var Sale = (function () {
     var hasPendingPrice = cart.some(function (l) { return F.num(l.price) <= 0 || l.pending === true; });
     document.getElementById('billSub').textContent = hasItems ? F.money(c.sub) : '';
     document.getElementById('billTotal').textContent = hasItems ? F.money(c.total) : '';
-    document.getElementById('billProfit').textContent = hasItems ? (hasPendingPrice ? '—' : (F.money(c.profit) + (c.cost ? ' (' + (c.total > 0 ? (c.profit / c.total * 100).toFixed(0) : 0) + '%)' : ''))) : '';
     // discount reason box + per-invoice "show discount" toggle: only shown when a discount is given
     var rr = document.getElementById('discReasonRow');
     if (rr) rr.hidden = !(c.discount > 0);
@@ -496,68 +495,6 @@ var Sale = (function () {
     } finally {
       savingSale = false;
     }
-  }
-
-  /* ---------------- hold / resume ---------------- */
-  function hold() {
-    if (!cart.length) { UI.toast('রাখার মতো কিছু নেই — বিল খালি।', 'warn'); return; }
-    DB.state.heldSales = DB.state.heldSales || [];
-    DB.state.heldSales.push({
-      id: DB.uid('hold'), at: new Date().toISOString(), cart: cart, customerId: customerId, vehicleNo: vehicleNo,
-      walkInCash: walkInCash, discount: calc().discount,
-      discountReason: document.getElementById('billDiscountReason').value,
-      showDiscount: (function () { var el = document.getElementById('saleShowDiscount'); return el ? !!el.checked : false; })(),
-      note: ''
-    });
-    DB.save();
-    reset();
-    UI.toast('বিল রেখে দেওয়া হয়েছে। “রাখা বিল খুলুন” চেপে ফিরিয়ে আনুন।', 'ok');
-  }
-  function resume() {
-    var list = DB.state.heldSales || [];
-    if (!list.length) { UI.toast('কোনো রাখা বিল নেই।', 'warn'); return; }
-    UI.modal({
-      title: 'রাখা বিলগুলো',
-      body: '<table class="table compact"><thead><tr><th>রাখা হয়েছে</th><th>কাস্টমার</th><th class="num">আইটেম</th><th class="num">টাকা</th><th></th></tr></thead><tbody>' +
-        list.map(function (h) {
-          var amt = h.cart.reduce(function (a, l) { return a + l.qty * l.price; }, 0) - F.num(h.discount);
-          var c = h.customerId ? DB.customerById(h.customerId) : null;
-          return '<tr><td>' + F.dt(h.at) + '</td><td>' + F.esc(c ? (c.nameBn || c.name) : 'ওয়াক-ইন') + '</td>' +
-            '<td class="num">' + h.cart.reduce(function (a, l) { return a + l.qty; }, 0) + '</td>' +
-            '<td class="num">' + F.money(amt) + '</td>' +
-            '<td><div class="row-actions"><button class="btn small" data-res="' + h.id + '">খুলুন</button><button class="btn small ghost" data-rm="' + h.id + '">মুছে ফেলুন</button></div></td></tr>';
-        }).join('') + '</tbody></table>',
-      buttons: [],
-      onOpen: function (root) {
-        root.querySelectorAll('[data-res]').forEach(function (b) {
-          b.onclick = function () {
-            var h = list.filter(function (x) { return x.id === b.getAttribute('data-res'); })[0];
-            cart = (h.cart || []).map(function (line) {
-              var x = Object.assign({}, line);
-              if (x.productId) {
-                var p = DB.productById(x.productId);
-                if (p) { x.stock = F.num(p.qty); x.cost = F.num(p.buyPrice); x.name = Stock.label(p); x.description = p.description || p.name || Stock.label(p); x.brand = p.brand; x.size = p.size; x.type = String(p.type || '').trim(); x.model = String(p.model || '').trim(); x.code = p.code; }
-              }
-              return x;
-            }); customerId = h.customerId || ''; vehicleNo = h.vehicleNo || '';
-            setWalkInCash(h.walkInCash === true && !customerId);
-            document.getElementById('billDiscount').value = F.num(h.discount) ? h.discount : '';
-            document.getElementById('billDiscountReason').value = h.discountReason || '';
-            var sdCb2 = document.getElementById('saleShowDiscount'); if (sdCb2) sdCb2.checked = (h.showDiscount === true);
-            if (customerId) { var c = DB.customerById(customerId); if (c) showCustBox(c); } else hideCustBox();
-            DB.state.heldSales = list.filter(function (x) { return x.id !== h.id; });
-            DB.save(); renderCart(); UI.closeModal();
-            UI.toast('রাখা বিল খোলা হয়েছে।', 'ok');
-          };
-        });
-        root.querySelectorAll('[data-rm]').forEach(function (b) {
-          b.onclick = function () {
-            DB.state.heldSales = list.filter(function (x) { return x.id !== b.getAttribute('data-rm'); });
-            DB.save(); UI.closeModal(); resume();
-          };
-        });
-      }
-    });
   }
 
   /* If the shopkeeper typed a new name / phone / vehicle instead of picking a saved customer,

@@ -276,7 +276,6 @@ var Customers = (function () {
         { label: 'বাতিল', cls: 'ghost', onClick: UI.closeModal },
         {
           label: isNew ? 'কাস্টমার সেভ করুন' : 'পরিবর্তন সেভ করুন', cls: 'primary', onClick: function () {
-            var name = '';
             var phone = digitsOnly(document.getElementById('cfPhone').value);
             document.getElementById('cfPhone').value = phone;
             var nameBn = (document.getElementById('cfNameBn') || {}).value.trim();

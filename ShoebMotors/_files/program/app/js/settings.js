@@ -244,7 +244,6 @@ var Settings = (function () {
     if (!tb) return;
     var list = DB.deletedList().slice(0, 40);
     tb.innerHTML = list.length ? list.map(function (d) {
-      var s2 = DB.state.settings;
       var kind = d.type === 'sale' ? 'ইনভয়েস' : d.type === 'product' ? 'পণ্য' : d.type === 'customer' ? 'কাস্টমার' : d.type === 'vehicle' ? 'গাড়ি' : 'পুরোনো তথ্য';
       var cls = d.type === 'sale' ? 'bad' : d.type === 'product' ? 'warn' : '';
       return '<tr>' +

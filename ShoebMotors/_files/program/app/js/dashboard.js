@@ -21,7 +21,6 @@ var Dashboard = (function () {
     /* --- আজ --- */
     var todayList = sales.filter(function (s) { return DB.todayStr(s.date) === today; });
     var tSales = sum(todayList, function (s) { return s.total; });
-    var tProfit = sum(todayList, function (s) { return s.profit; });
 
     setDashboardMoney('kpiTodaySales', tSales);
     document.getElementById('kpiTodayCount').textContent = F.qty(pcs(todayList)) + ' পিস বিক্রি';
@@ -75,8 +74,6 @@ var Dashboard = (function () {
     var remList = Object.keys(remMap).map(function (k) { remMap[k].due = DB.round2(remMap[k].due); return remMap[k]; })
       .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
 
-    var kd = document.getElementById('kpiDueReminder'); if (kd) kd.textContent = remList.length;
-    var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = '';
 
     /* আজকের কার্ড: আজকের বিলে কত বাকি রইল, আর আজ আগের দিনের ইনভয়েস / আগের বকেয়া থেকে কত পেলাম */
     setDashboardMoney('kpiTodayNewDue', sum(finalToday, function (s) { return DB.trueDue(s); }));
@@ -116,42 +113,6 @@ var Dashboard = (function () {
     document.getElementById('kpiTodayInv').textContent = todayList.length;
 
     document.getElementById('dashDate').textContent = F.weekday(today) + ', ' + F.d(today);
-
-    /* --- বিস্তারিত পাতার দরজা (tiles) --- */
-    var stockQty = sum(DB.state.products, function (p) { return p.qty; });
-    var tiles = [
-      {
-        jump: 'reports', cls: 't-red', label: 'রিপোর্ট',
-        value: moneyWithHover(tSales), sub: 'দিনভিত্তিক ও পণ্যভিত্তিক বিক্রির হিসাব'
-      },
-      {
-        jump: 'customers', cls: 't-amber', label: 'কাস্টমার',
-        value: DB.state.customers.length + ' জন', sub: 'কাস্টমার, মোবাইল ও গাড়ির তথ্য এক জায়গায়'
-      },
-      {
-        jump: 'sales', cls: 't-ink', label: 'বিক্রি ও ইনভয়েস',
-        value: invCount(todayList) + ' টি', sub: 'আজকের ইনভয়েস'
-      },
-      {
-        jump: 'stock', cls: 't-slate', label: 'স্টক',
-        value: DB.state.products.length + ' ধরনের পণ্য', sub: F.qty(stockQty) + ' পিস' + (low.length ? ' · কম ' + low.length + ' টি' : '')
-      },
-      {
-        jump: 'dayclosing', cls: 't-ink owner-only', label: 'Day Closing',
-        value: DB.dayClosingByDate(today) ? '✓ Closed' : ((window.Lang && Lang.isEn()) ? 'Close today' : 'আজ Close করুন'),
-        sub: 'Expected Cash ' + moneyWithHover(DayClosing.metrics(today).expectedCash) + ' · ' + ((window.Lang && Lang.isEn()) ? 'reconcile counted cash and finish the day' : 'হাতে গোনা ক্যাশ মিলিয়ে দিন শেষ করুন')
-      }
-    ];
-    var box = document.getElementById('dashTiles');
-    box.innerHTML = tiles.map(function (t) {
-      return '<button class="tile ' + t.cls + '" data-jump="' + t.jump + '">' +
-        '<span class="t-lab">' + t.label + '</span>' +
-        '<span class="t-val">' + t.value + '</span>' +
-        '<span class="t-sub">' + t.sub + '</span>' +
-        '<span class="t-go">খুলুন →</span>' +
-        '</button>';
-    }).join('');
-    wireJumps(box);
   }
 
   /* ---------------- পাতার লিংক ---------------- */

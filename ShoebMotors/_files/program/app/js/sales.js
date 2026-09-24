@@ -114,8 +114,6 @@ var Sales = (function () {
       (discount > 0 ? '<span class="tag">ছাড় ' + F.money(discount) + '</span>' : '');
   }
 
-  function shareInvoice(s) { whatsapp(s); }
-
   function whatsapp(s) {
     s = UI.invoiceSaleView ? UI.invoiceSaleView(s) : s;
     var st = DB.state.settings;
@@ -257,5 +255,5 @@ var Sales = (function () {
     });
   }
 
-  return { setPrices: setPrices, render: render, bind: bind, exportCsv: exportCsv, shareInvoice: shareInvoice, whatsapp: whatsapp };
+  return { setPrices: setPrices, render: render, bind: bind, exportCsv: exportCsv, whatsapp: whatsapp };
 })();

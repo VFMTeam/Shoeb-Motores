@@ -22,7 +22,7 @@
   if(m)m.setAttribute('content',r==='dark'?'#090e14':'#f5f6f7');
 })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=20260924-line-total">
+<link rel="stylesheet" href="css/style.css?v=20260924-cleanup">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -97,39 +97,6 @@
   </div>
 </section>
 
-<!-- ============ SETUP WIZARD ============ -->
-<section class="view" id="view-setup" hidden>
-  <div class="setup-wrap">
-    <h1>স্বাগতম — দোকানের তথ্য দিয়ে শুরু করুন</h1>
-    
-    <div class="card">
-      <h3>১. দোকানের তথ্য</h3>
-      <div class="grid2">
-        <label>দোকানের নাম ইংরেজিতে<input id="setupShopName"></label>
-        <label>দোকানের নাম বাংলায়<input id="setupShopNameBn"></label>
-        <label>ইনভয়েসের উপরের লেখা<input id="setupShopTag"></label>
-        <label>ঠিকানা<input id="setupAddress"></label>
-        <label>মোবাইল নম্বর<input id="setupPhone"></label>
-        <label>ইনভয়েস নম্বরের শুরু<input id="setupPrefix" maxlength="5"></label>
-        <label>মুদ্রা প্রতীক<input id="setupCurrency" maxlength="3"></label>
-      </div>
-
-    </div>
-
-    <div class="card">
-      <h3>২. সিকিউরিটি পিন</h3>
-      <div class="grid2">
-        <label>মালিকের পিন<input id="setupPin" type="password" inputmode="numeric" maxlength="6"></label>
-        <label>আবার পিন লিখুন<input id="setupPin2" type="password" inputmode="numeric" maxlength="6"></label>
-      </div>
-
-    </div>
-
-    <p class="err" id="setupError"></p>
-    <button class="btn primary big" id="finishSetupBtn">সেটআপ শেষ করে দোকান খুলুন</button>
-  </div>
-</section>
-
 <!-- ============ APP VIEWS ============ -->
 <main id="appMain" hidden>
 
@@ -160,7 +127,6 @@
 
     <div class="kpis kpis-clean">
       <div class="kpi"><span class="kpi-label">আজকের বিক্রি</span><span class="kpi-value" id="kpiTodaySales">—</span><span class="kpi-sub" id="kpiTodayCount">—</span></div>
-      <div class="kpi owner-only profit-report-only" hidden><span class="kpi-label">আজকের লাভ</span><span class="kpi-value" id="kpiTodayProfit">—</span><span class="kpi-sub" id="kpiTodayMargin">—</span></div>
       <div class="kpi"><span class="kpi-label">আজকের ইনভয়েস</span><span class="kpi-value" id="kpiTodayInv">—</span><span class="kpi-sub" id="kpiTodayInvSub"></span></div>
       <div class="kpi"><span class="kpi-label">কম স্টক</span><span class="kpi-value" id="kpiLow">—</span><span class="kpi-sub" id="kpiLowSub"></span></div>
     </div>
@@ -189,8 +155,6 @@
         <div class="dash-stat dash-stat-link" data-jump="due"><span class="m-lab">মোট পাওনা</span><b class="m-val" id="kpiTotalReceivable">—</b></div>
       </div>
     </div>
-
-    <div id="dashTiles" hidden></div>
   </section>
 
   <!-- ---------- NEW SALE (POS) ---------- -->
@@ -290,7 +254,6 @@
             </div>
           </div>
 
-          <div class="sale-profit-line owner-only profit-report-only" hidden><span>সম্ভাব্য লাভ</span><strong id="billProfit">—</strong></div>
           <div class="due-line warnline" id="billPendHint" hidden></div>
           <p class="err" id="saleError"></p>
           <button class="btn primary big full sale-invoice-btn" id="saveSaleBtn">ইনভয়েস তৈরি করুন</button>
@@ -829,8 +792,8 @@
 <script src="js/collections.js?v=20260924-no-brackets2"></script>
 <script src="js/due.js?v=20260924-cust-due"></script>
 <script src="js/dayclosing.js?v=1221-20260923"></script>
-<script src="js/dashboard.js?v=20260924-line-total"></script>
-<script src="js/reports.js?v=20260924-line-total"></script>
+<script src="js/dashboard.js?v=20260924-cleanup"></script>
+<script src="js/reports.js?v=20260924-cleanup"></script>
 <script src="js/settings.js?v=20260924-no-brackets2"></script>
 <script src="js/app.js?v=20260924-no-brackets2"></script>
 <script>

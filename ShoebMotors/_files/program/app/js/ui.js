@@ -149,9 +149,6 @@ var UI = (function () {
     return name;
   }
 
-  function priceCell(i) {
-    return F.bn(F.moneyPlain(i.price));
-  }
   function signBlock(sh) {
     /* সই করার জন্য উপরে ফাঁকা জায়গা, নিচে রেখা — A4-এ বড় করে */
     return '<div class="sign"><span class="sign-space"></span>' +
@@ -207,7 +204,6 @@ function invoiceA4Bn(sale) {
       var type = invoiceItemDetail(i, 'type');
       var model = invoiceItemDetail(i, 'model');
       var description = invoiceItemDetail(i, 'description') || String(i.name || '').trim();
-      var pend = DB.itemPending(i);
       /* Small line contains stock values only — no generated labels such as “মডেল:”. */
       var subBits = [];
       if (type) subBits.push(type);
@@ -225,7 +221,6 @@ function invoiceA4Bn(sale) {
     }).join('');
 
     var dReason = (sale.discountReason || '').trim();
-    var hasPendingPrice = DB.saleHasPending && DB.saleHasPending(sale);
     /* ইনভয়েসে ছাড় দেখানো/লুকানো — সেটিংস পরে বদলালেও এই ইনভয়েস তৈরির সময়কার অবস্থা অনুযায়ী চলবে। */
     var showDiscount = sale.showDiscount !== false;
     var sums = '';
@@ -236,9 +231,6 @@ function invoiceA4Bn(sale) {
     sums += '<tr class="grand"><td class="lab">মোট টাকা</td><td class="amt">' + m(sale.total) + '</td></tr>';
 
     var totalQty = sale.items.reduce(function (a, i) { return a + F.num(i.qty); }, 0);
-    var kv = function (k, v, cls) {
-      return '<div class="kv ' + (cls || '') + '"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
-    };
 
     return '' +
       '<div class="inv-wrap inv-a4">' +

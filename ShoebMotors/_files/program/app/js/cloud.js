@@ -124,13 +124,8 @@ var Cloud = (function () {
     });
   }
 
-  // Compatibility no-ops: older modules may still call these names. They NEVER touch network.
-  function noAuto() { return Promise.resolve(null); }
-
   hideGlobalPill();
   return {
-    autoPush:noAuto,
-    autoReconcile:noAuto,
     syncNow:syncNow,
     restoreNow:restoreNow,
     status:getStatus,

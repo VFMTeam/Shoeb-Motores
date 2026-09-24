@@ -59,9 +59,6 @@ var DB = (function () {
   }
   function deletedList() { return state.deleted || []; }
   function deletedById(id) { return (state.deleted || []).filter(function (d) { return d.id === id; })[0]; }
-  function dropDeleted(id) {
-    state.deleted = (state.deleted || []).filter(function (d) { return d.id !== id; });
-  }
   function defaultSettings() {
     return {
       shopName: 'Shoeb Motors & Tyre House',
@@ -741,18 +738,6 @@ var DB = (function () {
     return { items:itemCount, invoices:invoiceCount };
   }
 
-  /* fix old sales that were saved before this rule */
-  function migratePending(state2) {
-    (state2.sales || []).forEach(function (s) {
-      var dirty = false;
-      (s.items || []).forEach(function (i) {
-        if (i.pricePending === undefined) { i.pricePending = num(i.price) <= 0; dirty = true; }
-      });
-      if (saleHasPending(s)) { /* keep as is */ }
-    });
-    return state2;
-  }
-
   /* ------------------------- cash collection ledger ------------------------- */
   function collectionById(id) {
     return (state.receipts || []).filter(function (r) { return r.id === id && r.type === 'collection'; })[0];
@@ -920,9 +905,6 @@ var DB = (function () {
     var day = todayStr(date);
     return (state.dayClosings || []).filter(function (r) { return r.date === day; })[0];
   }
-  function dayClosingById(id) {
-    return (state.dayClosings || []).filter(function (r) { return r.id === id; })[0];
-  }
   function saveDayClosing(date, data) {
     var day = todayStr(date), now = new Date().toISOString();
     state.dayClosings = state.dayClosings || [];
@@ -957,8 +939,6 @@ var DB = (function () {
   function productById(id) { return state.products.filter(function (p) { return p.id === id; })[0]; }
   function customerById(id) { return state.customers.filter(function (c) { return c.id === id; })[0]; }
   function saleById(id) { return state.sales.filter(function (s) { return s.id === id; })[0]; }
-  function stockQty(pid) { var p = productById(pid); return p ? num(p.qty) : 0; }
-  function todaysSales() { var t = todayStr(); return state.sales.filter(function (s) { return todayStr(s.date) === t; }); }
 
   // how much each customer owes: the unpaid part of their invoices (each invoice keeps its own
   // paid/due, so a later collection already reduces it — receipts are only the money ledger)
@@ -1208,42 +1188,8 @@ var DB = (function () {
       return true;
     });
   }
-  function receiptsInRange(from, to) {
-    return (state.receipts || []).filter(function (p) {
-      var d = todayStr(p.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
-  function paymentsInRange(from, to) {
-    return (state.receipts || []).filter(function (p) { if (p.type === 'sale') return false;
-      var d = todayStr(p.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
-  function expensesInRange(from, to) {
-    return state.expenses.filter(function (e) {
-      var d = todayStr(e.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
   function stockValue() {
     return round2(state.products.reduce(function (a, p) { return a + num(p.qty) * num(p.buyPrice); }, 0));
-  }
-  function expectedProfit() {
-    // স্টকে থাকা সব পণ্য বিক্রয়মূল্যে বিক্রি হলে সম্ভাব্য লাভ (ক্রয়মূল্য বাদ দিয়ে)।
-    // কাস্টমারকে ছাড় দিলে আসল লাভ এর চেয়ে কম হতে পারে — তাই এটি "প্রত্যাশিত/সম্ভাব্য" লাভ।
-    return round2(state.products.reduce(function (a, p) {
-      return a + num(p.qty) * (num(p.sellPrice) - num(p.buyPrice));
-    }, 0));
-  }
-  function totalDue() {
-    return state.customers.reduce(function (a, c) { return a + Math.max(0, customerBalance(c.id)); }, 0);
   }
   function lowStockList() {
     return state.products.filter(function (p) { var limit = num(p.lowStock); return p.active !== false && limit > 0 && num(p.qty) <= limit; });
@@ -1278,22 +1224,22 @@ var DB = (function () {
       writeUnlockState(!!v);
       writePcTrust(!!v);
     },
-    archiveDeleted: archiveDeleted, deletedList: deletedList, deletedById: deletedById, dropDeleted: dropDeleted,
+    archiveDeleted: archiveDeleted, deletedList: deletedList, deletedById: deletedById,
     defaultState: defaultState, normalize: normalize, defaultSettings: defaultSettings,
 round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
   itemPending: itemPending, salePendingItems: salePendingItems, saleHasPending: saleHasPending,
-  recalcSale: recalcSale, backfillMissingProductCost: backfillMissingProductCost, migratePending: migratePending,
+  recalcSale: recalcSale, backfillMissingProductCost: backfillMissingProductCost,
     on: on, emit: emit, fixText: fixText, repairText: repairText,
     get fixedTexts() { return fixedTexts; },
-    productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
+    productById: productById, customerById: customerById, saleById: saleById,
     openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, collectOpeningDue: collectOpeningDue,
     customerBalance: customerBalance, supplierById: supplierById, saveSupplier: saveSupplier, supplierStats: supplierStats, checkSupplierOpening: checkSupplierOpening, addSupplierOpening: addSupplierOpening, updateSupplierOpening: updateSupplierOpening, addSupplierPayment: addSupplierPayment, removeSupplierPayment: removeSupplierPayment, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
-    salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
-    receiptsInRange: receiptsInRange, collectionsInRange: collectionsInRange,
+    salesInRange: salesInRange,
+    collectionsInRange: collectionsInRange,
     dueKey: dueKey, duePaymentAccount: duePaymentAccount, payCustomerDue: payCustomerDue, collectionReceipt: collectionReceipt,
     addCollection: addCollection, removeCollection: removeCollection, collectionById: collectionById, trackedDueTotal: trackedDueTotal, trueDue: trueDue,
-    dayClosingByDate: dayClosingByDate, dayClosingById: dayClosingById, saveDayClosing: saveDayClosing, dayClosingsList: dayClosingsList,
-    stockValue: stockValue, expectedProfit: expectedProfit, totalDue: totalDue, lowStockList: lowStockList, dueReminderList: dueReminderList, todaysSales: todaysSales,
+    dayClosingByDate: dayClosingByDate, saveDayClosing: saveDayClosing, dayClosingsList: dayClosingsList,
+    stockValue: stockValue, lowStockList: lowStockList, dueReminderList: dueReminderList,
   };
 })();
