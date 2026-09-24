@@ -236,12 +236,6 @@ var Reports = (function () {
       kpi('green', tx('মোট লাভ', 'Total profit'), F.money(totProfit), totSales > 0 ? (totProfit / totSales * 100).toFixed(1) + tx('% বিক্রির উপর', '% of sales') : '') +
       kpi('', tx('দেওয়া ছাড়', 'Discount given'), F.money(totDiscount), '');
 
-    document.getElementById('repPL').innerHTML =
-      row(tx('মোট বিক্রি (ছাড় বাদ দিয়ে)', 'Net sales (after discount)'), F.money(totSales)) +
-      row(tx('বিক্রি হওয়া পণ্যের ক্রয়মূল্য', 'Cost of products sold'), '- ' + F.money(totCost)) +
-      '<tr class="total-row"><td>' + tx('মোট লাভ', 'Total profit') + '</td><td class="num">' + F.money(totProfit) + '</td></tr>' +
-      row(tx('দেওয়া ছাড়', 'Discount given'), F.money(totDiscount));
-
     /* ---- by product ---- */
     var byProd = {};
     sales.forEach(function (s) {
@@ -308,9 +302,6 @@ var Reports = (function () {
 
     function kpi(cls, label, value, sub) {
       return '<div class="kpi ' + cls + '"><span class="kpi-label">' + label + '</span><span class="kpi-value">' + value + '</span><span class="kpi-sub">' + sub + '</span></div>';
-    }
-    function row(label, value) {
-      return '<tr><td>' + label + '</td><td class="num">' + value + '</td></tr>';
     }
   }
 
