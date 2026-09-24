@@ -1470,7 +1470,6 @@ html[data-theme="dark"]{color-scheme:dark}
 #repByProduct .report-empty-row td{padding:0}
 #repByProduct .report-empty{padding:24px 14px;text-align:center;color:var(--muted);font-weight:700;letter-spacing:.01em}
 @media(max-width:760px){.report-range-tools{gap:7px}.report-range-tools select,.report-range-tools input[type="date"]{min-width:0;flex:1 1 135px}.report-range-sep{display:none}}
-.report-current-facts{flex-wrap:wrap;gap:6px 10px;margin:-6px 0 4px}
 
 /* v12.8.11 - reports page interactive sales chart */
 .chart-head-actions{align-items:center;gap:10px}

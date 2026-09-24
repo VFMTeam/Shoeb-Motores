@@ -13,16 +13,6 @@ var Reports = (function () {
   var topCustomerSort = 'amount';
   var productSort = 'rev';
 
-  /* এই তথ্যগুলো তারিখ-সীমার উপর নির্ভর করে না (এই মুহূর্তের অবস্থা),
-     তাই উপরের রেঞ্জ-ভিত্তিক KPI থেকে আলাদা করে দেখানো — দুইবার হিসাব করার ভুল বোঝাবুঝি এড়াতে। */
-  function renderCurrentFacts() {
-    var box = document.getElementById('repCurrentFacts');
-    if (!box) return;
-    box.innerHTML =
-      '<span>' + tx('বর্তমান অবস্থা (তারিখ নির্বিশেষে)', 'Current status (regardless of date range)') + ':</span> ' +
-      '<span><b>' + tx('মোট কাস্টমার', 'Total customers') + '</b> ' + DB.state.customers.length + '</span>';
-  }
-
   /* স্টক মূল্য — ব্যবসার গোপন হিসাব, তাই ড্যাশবোর্ডে নয়, শুধু মালিকের রিপোর্টে।
      টাইপ অনুযায়ী মোট পরিমাণ (যেমন টায়ার ৪০০ পিস · রশি ৩০০ কেজি) ও ক্রয়মূল্যে স্টকের দাম। */
   function renderStockValue() {
@@ -230,7 +220,6 @@ var Reports = (function () {
     var r = range();
     var sales = DB.salesInRange(r.from, r.to);
 
-    renderCurrentFacts();
     renderStockValue();
     var chartRange = document.getElementById('anaChartRange');
     renderSalesChart(chartRange && chartRange.value ? Number(chartRange.value) : 30);
