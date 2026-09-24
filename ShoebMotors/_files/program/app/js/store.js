@@ -1028,17 +1028,6 @@ var DB = (function () {
     save();
     return e;
   }
-  function deleteOpeningDue(cid, id) {
-    var c = customerById(cid), e = c && openingEntry(c, id);
-    if (!e) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
-    var info = openingEntries(cid).filter(function (x) { return x.id === id; })[0] || {};
-    if (info.paid > 0.009) throw new Error('এই বকেয়া থেকে টাকা জমা হয়েছে, তাই মুছে ফেলা যাবে না। আগে জমার এন্ট্রি বাতিল করুন।');
-    archiveDeleted('opening-due', (c.nameBn || c.name || 'কাস্টমার') + ' — আগের বকেয়া', { customerId: c.id, entry: e }, { amount: num(e.amount), date: e.date });
-    c.openingDues = c.openingDues.filter(function (x) { return x.id !== id; });
-    syncOpeningTotal(c);
-    save();
-    return true;
-  }
   function collectOpeningDue(cid, id, value, date, note) {
     var c = customerById(cid), amount = balanceAmount(value);
     var info = openingEntries(cid).filter(function (x) { return x.id === id; })[0];
@@ -1191,7 +1180,7 @@ round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
     on: on, emit: emit, fixText: fixText, repairText: repairText,
     get fixedTexts() { return fixedTexts; },
     productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
-    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, deleteOpeningDue: deleteOpeningDue, collectOpeningDue: collectOpeningDue,
+    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, collectOpeningDue: collectOpeningDue,
     customerBalance: customerBalance, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
     salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,

@@ -444,7 +444,7 @@ var Customers = (function () {
     var openingDueTotal = 0;
     DB.openingEntries(id).forEach(function (e) {
       openingDueTotal += e.due;
-      rows.push({ date: e.date + 'T00:00:00', html: '<tr class="opening-due-row"><td><span class="tag warn">আগের বকেয়া</span></td><td>' + F.d(e.date) + '</td>' +
+      rows.push({ date: e.date + 'T00:00:00', html: '<tr class="opening-due-row"><td><span class="tag warn opening-tag">আগের বকেয়া</span></td><td>' + F.d(e.date) + '</td>' +
         '<td class="tiny">' + (F.esc(e.note) || '<span class="muted">পুরোনো হিসাবের বাকি</span>') + '</td>' +
         '<td class="num">' + F.money(e.amount) + '</td><td class="num">—</td>' +
         '<td class="num"><b>' + F.money(e.amount) + '</b></td>' +
@@ -453,7 +453,6 @@ var Customers = (function () {
         '<td><div class="row-actions">' +
         (e.due > 0.009 ? '<button class="btn small primary" data-pay-opening="' + F.esc(e.id) + '">টাকা জমা</button>' : '') +
         '<button class="btn small" data-edit-opening="' + F.esc(e.id) + '">বদলান</button>' +
-        (e.paid <= 0.009 ? '<button class="btn small ghost" data-del-opening="' + F.esc(e.id) + '">মুছুন</button>' : '') +
         '</div></td></tr>' });
     });
     rows.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
@@ -478,13 +477,12 @@ var Customers = (function () {
     var tb = document.querySelector('#cpSales tbody');
     tb.querySelectorAll('[data-pay-opening]').forEach(function (b) { b.onclick = function () { payOpening(id, b.getAttribute('data-pay-opening')); }; });
     tb.querySelectorAll('[data-edit-opening]').forEach(function (b) { b.onclick = function () { openingForm(id, b.getAttribute('data-edit-opening')); }; });
-    tb.querySelectorAll('[data-del-opening]').forEach(function (b) { b.onclick = function () { deleteOpening(id, b.getAttribute('data-del-opening')); }; });
     document.querySelector('#cpSales tbody').querySelectorAll('[data-price]').forEach(function (b) {
       b.onclick = function () { if (window.Sales && Sales.setPrices) Sales.setPrices(b.getAttribute('data-price')); };
     });
   }
 
-  /* ------- আগের বকেয়া: যোগ / বদল / মুছুন / টাকা জমা ------- */
+  /* ------- আগের বকেয়া: যোগ / বদল / টাকা জমা ------- */
   function openingForm(cid, entryId, draft) {
     var e = entryId ? DB.openingEntries(cid).filter(function (x) { return x.id === entryId; })[0] : null;
     if (entryId && !e) { UI.toast('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।', 'bad'); return; }
@@ -515,15 +513,6 @@ var Customers = (function () {
         } }],
       onOpen: function (root) { root.querySelector('#odAmount').focus(); }
     });
-  }
-
-  function deleteOpening(cid, entryId) {
-    UI.confirmDialog({ title: 'আগের বকেয়া মুছে ফেলবেন?', message: 'এই বকেয়ার এন্ট্রিটি কাস্টমারের হিসাব থেকে মুছে যাবে।', danger: true, confirmText: 'মুছে ফেলুন' })
-      .then(function (ok) {
-        if (!ok) return;
-        try { DB.deleteOpeningDue(cid, entryId); } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
-        App.refreshAll(); UI.toast('আগের বকেয়া মুছে ফেলা হয়েছে।', 'ok');
-      });
   }
 
   function payOpening(cid, entryId) {
