@@ -157,11 +157,28 @@ var F = (function () {
     document.body.appendChild(a); a.click();
     setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
   }
+  /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখানোর জন্য, শেষে "মাত্র" ছাড়া */
+  function moneyWords(v) {
+    return (enMode() ? wordsMoney(v) : wordsMoneyBn(v)).replace(/\s*(মাত্র|only)$/, '');
+  }
+  /* root-এর ভেতরে যেখানে শুধু টাকার অঙ্ক লেখা (যেমন "৳ 26,270" বা "মোট: ৳ 1,200"), সেখানে মাউস রাখলে কথায় দেখায় */
+  function wordsHover(root) {
+    if (!root) return;
+    Array.prototype.forEach.call(root.querySelectorAll('*'), function (el) {
+      if (el.children.length || /^(OPTION|SELECT|SCRIPT|STYLE)$/.test(el.tagName)) return;
+      var m = String(el.textContent || '').trim().match(/^(?:[^\d৳]*:\s*)?[−-]?\s*৳\s*([\d,]+(?:\.\d+)?)$/);
+      if (!m) return;
+      var v = num(m[1].replace(/,/g, ''));
+      if (!(v > 0)) return;
+      el.title = moneyWords(v);
+      el.classList.add('money-words');
+    });
+  }
   return {
     money: money, moneyPlain: moneyPlain, bn: bn, withCommas: withCommas, qty: qty, num: num, cur: cur,
     d: d, dt: dt, weekday: weekday, time: time, today: today, addDays: addDays, startOfMonth: startOfMonth,
     startOfYear: startOfYear, relDay: relDay, esc: esc, words: words, wordsMoney: wordsMoney,
-    csv: csv, download: download,
+    csv: csv, download: download, moneyWords: moneyWords, wordsHover: wordsHover,
     wordsBn: wordsBn, wordsMoneyBn: wordsMoneyBn
   };
 })();

@@ -2899,3 +2899,26 @@ html[data-theme="dark"] .modal .inv-note *{color:#fff !important;-webkit-text-fi
 .dash-stat-link:hover{outline:1px solid var(--line)}
 .dash-stat .m-val small{font-size:12px;font-weight:700;opacity:.8}
 .money-words{cursor:help}
+
+/* নতুন বিক্রি — দর ও টাকার ঘর: × আইকনে দর মোছা, দুই ঘর একই মাপে */
+#view-sale #cartTable .price-edit{position:relative;display:inline-flex;align-items:center;justify-content:flex-end;flex-wrap:nowrap;gap:0}
+#view-sale #cartTable .price-edit .mini-input,#view-sale #cartTable .line-total-input{width:118px;text-align:right;font-variant-numeric:tabular-nums}
+#view-sale #cartTable .price-edit .mini-input{padding-right:30px}
+#view-sale #cartTable .line-total-input{font-weight:800}
+#view-sale #cartTable .price-clear{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:18px;height:18px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;font-size:13px;line-height:1;cursor:pointer;color:var(--muted);background:color-mix(in srgb,var(--muted) 16%,transparent)}
+#view-sale #cartTable .price-clear:hover{color:#fff;background:var(--accent)}
+#view-sale #cartTable th.col-rate,#view-sale #cartTable th.col-amount{width:140px}
+
+/* মোট অংশ — ছাড়ের ঘর এক লাইনে, সর্বমোট ছোট */
+#view-sale .sale-discount-box{margin:6px 15px 10px;padding:8px 10px}
+#view-sale .sale-discount-box:has(#billDiscount){display:grid;grid-template-columns:auto minmax(0,150px);align-items:center;justify-content:space-between;gap:6px 10px}
+#view-sale .sale-discount-box:has(#billDiscount)>label{margin:0}
+#view-sale .sale-discount-box:has(#billDiscount) .sale-discount-reason{grid-column:1/-1}
+#view-sale .sale-money-input{grid-template-columns:30px 1fr;border-radius:8px}
+#view-sale .sale-money-input .disc-input{height:34px;padding:6px 10px;font-size:14px}
+#view-sale .sale-grand-total{margin:0 15px 10px;padding:10px 14px;border-radius:10px;align-items:center}
+#view-sale .sale-grand-total>strong{font-size:20px;letter-spacing:0}
+#view-sale #cartTable th.col-rate,#view-sale #cartTable th.col-amount{text-align:right;padding-right:14px}
+#view-sale .sale-discount-box>label,#view-sale .sale-discount-reason label{display:block;padding:0;text-align:left}
+#view-sale .sale-discount-box:has(#billDiscount) .sale-discount-reason{padding-top:2px}
+#view-sale .sale-discount-reason .disc-reason{height:34px}

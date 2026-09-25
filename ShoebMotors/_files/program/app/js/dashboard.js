@@ -23,6 +23,8 @@ var Dashboard = (function () {
     var tSales = sum(todayList, function (s) { return s.total; });
 
     setDashboardMoney('kpiTodaySales', tSales);
+    var tsEl = document.getElementById('kpiTodaySales');
+    if (tsEl) { tsEl.title = tSales > 0 ? F.moneyWords(tSales) : ''; tsEl.classList.toggle('money-words', tSales > 0); }
     document.getElementById('kpiTodayCount').textContent = F.qty(pcs(todayList)) + ' পিস বিক্রি';
 
     /* --- আজকের cash collection status --- */

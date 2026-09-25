@@ -247,8 +247,8 @@ var Sale = (function () {
         '<button class="qty-btn" data-minus="' + i + '">−</button>' +
         '<input class="mini-input" style="width:52px;text-align:center" type="number" min="1" step="1" value="' + l.qty + '" data-qty="' + i + '">' +
         '<button class="qty-btn" data-plus="' + i + '">+</button></div>' + warn + '</td>' +
-        '<td class="num"><div class="price-edit"><input class="mini-input" style="width:110px" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? l.price : '') + '" data-price="' + i + '"><button class="qty-btn price-later" type="button" data-clear-price="' + i + '" title="দর মুছুন">দর মুছুন</button></div></td>' +
-        '<td class="num"><input class="mini-input line-total-input" style="width:120px" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? DB.round2(l.qty * l.price) : '') + '" data-total="' + i + '"></td>' +
+        '<td class="num"><div class="price-edit"><input class="mini-input" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? l.price : '') + '" data-price="' + i + '">' + (F.num(l.price) > 0 ? '<button class="price-clear" type="button" data-clear-price="' + i + '" title="দর মুছুন" aria-label="দর মুছুন">×</button>' : '') + '</div></td>' +
+        '<td class="num"><input class="mini-input line-total-input" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? DB.round2(l.qty * l.price) : '') + '" data-total="' + i + '"></td>' +
         '<td><div class="row-actions"><button class="btn small ghost" data-del="' + i + '">✕</button></div></td>' +
         '</tr>';
     }).join('') : '';

@@ -8,7 +8,7 @@ var Reports = (function () {
     return n + (n === 1 ? ' invoice' : ' invoices');
   }
   /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখায় */
-  function moneyWords(v) { return (en() ? F.wordsMoney(v) : F.wordsMoneyBn(v)).replace(/\s*(মাত্র|only)$/, ''); }
+  function moneyWords(v) { return F.moneyWords(v); }
   function pcCount(n) { return F.qty(n) + (en() ? ' pc' : ' পিস'); }
 
   var appliedRange = null;
@@ -301,6 +301,9 @@ var Reports = (function () {
     });
 
 
+    /* রিপোর্টের সব টাকার অঙ্কে মাউস রাখলে কথায় */
+    F.wordsHover(document.getElementById('view-reports'));
+
     function kpi(cls, label, value, sub) {
       return '<div class="kpi ' + cls + '"><span class="kpi-label">' + label + '</span><span class="kpi-value">' + value + '</span><span class="kpi-sub">' + sub + '</span></div>';
     }
@@ -387,7 +390,7 @@ var Reports = (function () {
     var d = document.getElementById('repPdfBtn'); if (d) d.onclick = downloadReportPdf;
 
     var chartRange = document.getElementById('anaChartRange');
-    if (chartRange) chartRange.onchange = function () { renderSalesChart(Number(chartRange.value)); };
+    if (chartRange) chartRange.onchange = function () { renderSalesChart(Number(chartRange.value)); F.wordsHover(document.getElementById('view-reports')); };
   }
 
   return { render: render, bind: bind, setRange: setRange, range: range, reportPrintHtml: reportPrintHtml, printReport: printReport, downloadReportPdf: downloadReportPdf };
