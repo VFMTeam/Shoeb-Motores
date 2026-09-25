@@ -7,22 +7,32 @@ var Reports = (function () {
     if (!en()) return n + ' টি ইনভয়েস';
     return n + (n === 1 ? ' invoice' : ' invoices');
   }
+  /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখায় */
+  function moneyWords(v) { return F.moneyWords(v); }
   function pcCount(n) { return F.qty(n) + (en() ? ' pc' : ' পিস'); }
 
   var appliedRange = null;
   var topCustomerSort = 'amount';
   var productSort = 'rev';
 
-  /* এই তথ্যগুলো তারিখ-সীমার উপর নির্ভর করে না (এই মুহূর্তের অবস্থা),
-     তাই উপরের রেঞ্জ-ভিত্তিক KPI থেকে আলাদা করে দেখানো — দুইবার হিসাব করার ভুল বোঝাবুঝি এড়াতে। */
-  function renderCurrentFacts() {
-    var box = document.getElementById('repCurrentFacts');
-    if (!box) return;
-    var stockVal = DB.stockValue();
-    box.innerHTML =
-      '<span>' + tx('বর্তমান অবস্থা (তারিখ নির্বিশেষে)', 'Current status (regardless of date range)') + ':</span> ' +
-      '<span><b>' + tx('মোট কাস্টমার', 'Total customers') + '</b> ' + DB.state.customers.length + '</span>' +
-      ' · <span class="owner-only"><b>' + tx('স্টকের মূল্য (ক্রয়মূল্যে)', 'Stock value (at cost)') + '</b> ' + F.money(stockVal) + '</span>';
+  /* স্টক মূল্য — ব্যবসার গোপন হিসাব, তাই ড্যাশবোর্ডে নয়, শুধু মালিকের রিপোর্টে।
+     টাইপ অনুযায়ী মোট পরিমাণ (যেমন টায়ার ৪০০ পিস · রশি ৩০০ কেজি) ও ক্রয়মূল্যে স্টকের দাম। */
+  function renderStockValue() {
+    var table = document.getElementById('repStock');
+    if (!table) return;
+    var list = Stock.typeSummary();
+    var totalEl = document.getElementById('repStockTotal');
+    if (totalEl) { totalEl.textContent = tx('মোট', 'Total') + ': ' + F.money(DB.stockValue()); totalEl.title = moneyWords(DB.stockValue()); totalEl.classList.add('money-words'); }
+    table.innerHTML =
+      '<thead><tr><th>' + tx('পণ্যের ধরন', 'Product type') + '</th><th class="num">' + tx('পণ্য', 'Products') + '</th><th>' + tx('মোট পরিমাণ', 'Total quantity') + '</th><th class="num">' + tx('ক্রয়মূল্য', 'Value at cost') + '</th></tr></thead><tbody>' +
+      (list.length ? list.map(function (g) {
+        return '<tr><td><b>' + F.esc(Stock.typeLabel(g.type)) + '</b></td>' +
+          '<td class="num">' + g.count + '</td>' +
+          '<td class="detail-stock-total">' + Stock.unitTotalsHtml(g) + '</td>' +
+          '<td class="num">' + F.money(g.value) + '</td></tr>';
+      }).join('') + '<tr class="total-row"><td colspan="3">' + tx('মোট স্টক মূল্য', 'Total stock value') + '</td><td class="num money-words" title="' + F.esc(moneyWords(DB.stockValue())) + '">' + F.money(DB.stockValue()) + '</td></tr>'
+        : '<tr class="empty-row"><td colspan="4">' + tx('এখনো কোনো স্টক নেই।', 'No stock yet.') + '</td></tr>') +
+      '</tbody>';
   }
 
   /* ইন্টার‌্যাক্টিভ বিক্রির চার্ট: ১ / ৭ / ১৪ / ৩০ দিন (আজ থেকে পিছনে — রিপোর্টের from/to রেঞ্জ থেকে আলাদা,
@@ -198,7 +208,7 @@ var Reports = (function () {
     var table = document.getElementById('repTopCustomers');
     if (!table) return;
     table.innerHTML =
-      '<thead><tr><th>' + tx('কাস্টমার', 'Customer') + '</th><th class="num">' + tx('ইনভয়েস', 'Invoices') + '</th><th class="num">' + tx('পণ্য (পিস)', 'Products (pcs)') + '</th><th class="num">' + tx('মোট কেনা', 'Total bought') + '</th></tr></thead><tbody>' +
+      '<thead><tr><th>' + tx('কাস্টমার', 'Customer') + '</th><th class="num">' + tx('ইনভয়েস', 'Invoices') + '</th><th class="num">' + tx('মোট পিস', 'Total pcs') + '</th><th class="num">' + tx('মোট কেনা', 'Total bought') + '</th></tr></thead><tbody>' +
       (list.length ? list.map(function (c) {
         return '<tr><td><div class="cell-main"><b>' + F.esc(c.name) + '</b></div>' +
           (c.phone ? '<div class="cell-sub mono">' + F.esc(c.phone) + '</div>' : '') + '</td>' +
@@ -212,7 +222,7 @@ var Reports = (function () {
     var r = range();
     var sales = DB.salesInRange(r.from, r.to);
 
-    renderCurrentFacts();
+    renderStockValue();
     var chartRange = document.getElementById('anaChartRange');
     renderSalesChart(chartRange && chartRange.value ? Number(chartRange.value) : 30);
 
@@ -228,12 +238,6 @@ var Reports = (function () {
       kpi('green', tx('মোট লাভ', 'Total profit'), F.money(totProfit), totSales > 0 ? (totProfit / totSales * 100).toFixed(1) + tx('% বিক্রির উপর', '% of sales') : '') +
       kpi('', tx('দেওয়া ছাড়', 'Discount given'), F.money(totDiscount), '');
 
-    document.getElementById('repPL').innerHTML =
-      row(tx('মোট বিক্রি (ছাড় বাদ দিয়ে)', 'Net sales (after discount)'), F.money(totSales)) +
-      row(tx('বিক্রি হওয়া পণ্যের ক্রয়মূল্য', 'Cost of products sold'), '- ' + F.money(totCost)) +
-      '<tr class="total-row"><td>' + tx('মোট লাভ', 'Total profit') + '</td><td class="num">' + F.money(totProfit) + '</td></tr>' +
-      row(tx('দেওয়া ছাড়', 'Discount given'), F.money(totDiscount));
-
     /* ---- by product ---- */
     var byProd = {};
     sales.forEach(function (s) {
@@ -247,7 +251,6 @@ var Reports = (function () {
       });
     });
     var prodList = Object.keys(byProd).map(function (k) { return byProd[k]; });
-    var totRevAll = prodList.reduce(function (a, p) { return a + p.rev; }, 0) || 1;
 
     var prodSortEl = document.getElementById('repProductSort');
     if (prodSortEl && prodSortEl.value) productSort = prodSortEl.value;
@@ -292,19 +295,17 @@ var Reports = (function () {
       b.onclick = function () {
         var dd = b.getAttribute('data-day');
         document.getElementById('salesSearch').value = '';
-        document.getElementById('salesFrom').value = dd;
-        document.getElementById('salesTo').value = dd;
-        document.getElementById('salesQuick').value = '';
+        document.getElementById('salesDay').value = dd;
         App.show('sales');
       };
     });
 
 
+    /* রিপোর্টের সব টাকার অঙ্কে মাউস রাখলে কথায় */
+    F.wordsHover(document.getElementById('view-reports'));
+
     function kpi(cls, label, value, sub) {
       return '<div class="kpi ' + cls + '"><span class="kpi-label">' + label + '</span><span class="kpi-value">' + value + '</span><span class="kpi-sub">' + sub + '</span></div>';
-    }
-    function row(label, value) {
-      return '<tr><td>' + label + '</td><td class="num">' + value + '</td></tr>';
     }
   }
 
@@ -389,7 +390,7 @@ var Reports = (function () {
     var d = document.getElementById('repPdfBtn'); if (d) d.onclick = downloadReportPdf;
 
     var chartRange = document.getElementById('anaChartRange');
-    if (chartRange) chartRange.onchange = function () { renderSalesChart(Number(chartRange.value)); };
+    if (chartRange) chartRange.onchange = function () { renderSalesChart(Number(chartRange.value)); F.wordsHover(document.getElementById('view-reports')); };
   }
 
   return { render: render, bind: bind, setRange: setRange, range: range, reportPrintHtml: reportPrintHtml, printReport: printReport, downloadReportPdf: downloadReportPdf };

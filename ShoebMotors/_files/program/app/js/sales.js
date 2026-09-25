@@ -3,29 +3,18 @@ var Sales = (function () {
   var lastFiltered = [];
   var salesPage = 1, PAGE_SIZE = 50;
 
+  /* একটাই তারিখ; খালি থাকলে সব ইনভয়েস */
   function currentFilters() {
     return {
       q: (document.getElementById('salesSearch').value || '').trim(),
-      from: document.getElementById('salesFrom').value,
-      to: document.getElementById('salesTo').value,
-      day: document.getElementById('salesDay').value,
-      quick: document.getElementById('salesQuick').value
+      day: document.getElementById('salesDay').value
     };
   }
 
-  function applyQuick(f) {
-    if (f.quick === 'today') { f.from = F.today(); f.to = F.today(); }
-    else if (f.quick === 'week') { f.from = F.addDays(F.today(), -6); f.to = F.today(); }
-    else if (f.quick === 'month') { f.from = F.startOfMonth(); f.to = F.today(); }
-    return f;
-  }
-
   function filtered() {
-    var f = applyQuick(currentFilters());
+    var f = currentFilters();
     var list = DB.state.sales.slice();
-    if (f.day) { f.from = f.day; f.to = f.day; }
-    if (f.from) list = list.filter(function (s) { return DB.todayStr(s.date) >= f.from; });
-    if (f.to) list = list.filter(function (s) { return DB.todayStr(s.date) <= f.to; });
+    if (f.day) list = list.filter(function (s) { return DB.todayStr(s.date) === f.day; });
     if (f.q) {
       var q = f.q.toLowerCase();
       list = list.filter(function (s) {
@@ -38,6 +27,39 @@ var Sales = (function () {
     return list;
   }
 
+  /* প্রতিটি ইনভয়েসের সব কাজ একটি বোতামে — চাপলে ছোট মেনু খোলে। */
+  function actions(id) {
+    var s = DB.saleById(id);
+    if (!s) return;
+    var items = [
+      { key: 'a5', label: 'A5 ইনভয়েস' },
+      { key: 'thermal', label: '🧾 থার্মাল প্রিন্ট' }
+    ];
+    if (s.collectionTracking === true && F.num(s.due) > 0.009) items.push({ key: 'collect', label: '＋ ক্যাশ' });
+    if (DB.saleHasPending(s)) items.push({ key: 'price', label: 'দাম বসান' });
+    items.push({ key: 'del', label: '🗑 ইনভয়েস মুছে ফেলুন', cls: 'danger' });
+    UI.modal({
+      title: 'ইনভয়েস ' + s.invoiceNo,
+      body: '<div class="inv-actions-menu">' + items.map(function (x) {
+        return '<button type="button" class="btn ' + (x.cls || '') + '" data-act="' + x.key + '">' + x.label + '</button>';
+      }).join('') + '</div>',
+      buttons: [],
+      onOpen: function (root) {
+        root.querySelectorAll('[data-act]').forEach(function (b) {
+          b.onclick = function () {
+            var k = b.getAttribute('data-act');
+            UI.closeModal();
+            if (k === 'a5') UI.openInvoice(id, 'a5');
+            else if (k === 'thermal') UI.printInvoice(DB.saleById(id), '80');
+            else if (k === 'collect') Collections.open(id);
+            else if (k === 'price') setPrices(id);
+            else if (k === 'del') remove(id);
+          };
+        });
+      }
+    });
+  }
+
   function render() {
     var list = filtered();
     lastFiltered = list;
@@ -46,51 +68,22 @@ var Sales = (function () {
     if (salesPage > totalPages) salesPage = totalPages;
     if (salesPage < 1) salesPage = 1;
     var pageList = list.slice((salesPage - 1) * PAGE_SIZE, salesPage * PAGE_SIZE);
-    var f = applyQuick(currentFilters());
-    if (f.day) { f.from = f.day; f.to = f.day; }
+    var f = currentFilters();
     var range = document.getElementById('salesRangeSummary');
-    var rangeText = 'সব সময়ের ইনভয়েস';
-    if (f.from && f.to && f.from === f.to) rangeText = F.d(f.from) + ' — ' + list.length + ' টি ইনভয়েস';
-    else if (f.quick === 'week') rangeText = 'শেষ ৭ দিন — ' + list.length + ' টি ইনভয়েস';
-    else if (f.quick === 'month') rangeText = 'এই মাস — ' + list.length + ' টি ইনভয়েস';
-    else if (f.from || f.to) rangeText = (f.from ? F.d(f.from) : 'শুরু') + ' থেকে ' + (f.to ? F.d(f.to) : 'আজ') + ' — ' + list.length + ' টি ইনভয়েস';
-    else rangeText += ' — ' + list.length + ' টি';
-    if (range) range.innerHTML = '<b>' + rangeText + '</b>';
-
-    var dayMap = {};
-    list.forEach(function (s) { var d = DB.todayStr(s.date); dayMap[d] = (dayMap[d] || 0) + 1; });
-    var dayBox = document.getElementById('salesDayBreakdown');
-    if (dayBox) {
-      var days = Object.keys(dayMap).sort().reverse().slice(0, 31);
-      dayBox.innerHTML = days.length > 1 ? days.map(function (d) {
-        return '<button class="day-chip" data-day="' + d + '">' + F.d(d) + ' · <b>' + dayMap[d] + '</b></button>';
-      }).join('') : '';
-      dayBox.querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () {
-        salesPage = 1;
-        document.getElementById('salesDay').value = b.getAttribute('data-day');
-        document.getElementById('salesQuick').value = '';
-        document.getElementById('salesFrom').value = ''; document.getElementById('salesTo').value = '';
-        render();
-      }; });
-    }
+    if (range) range.innerHTML = '<b>' + (f.day ? F.d(f.day) : ((window.Lang && Lang.isEn()) ? 'All invoices' : 'সব ইনভয়েস')) + ' — ' + list.length + ((window.Lang && Lang.isEn()) ? '' : ' টি') + '</b>';
 
     var tb = document.querySelector('#salesTable tbody');
     tb.innerHTML = pageList.length ? pageList.map(function (s) {
       return '<tr>' +
         '<td><b>' + F.esc(s.invoiceNo) + '</b></td>' +
         '<td>' + F.d(s.date) + '<div class="cell-sub">' + F.time(s.date) + '</div></td>' +
-        '<td><div class="cell-main">' + F.esc(Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন') + '</div><div class="cell-sub mono">' + (s.vehicleNo ? F.esc(s.vehicleNo) : F.esc(s.customerPhone || '')) + '</div></td>' +
+        '<td><div class="cell-main">' + F.esc(Lang.custName(s) || 'ওয়াক-ইন') + '</div><div class="cell-sub mono">' + (s.vehicleNo ? F.esc(s.vehicleNo) : F.esc(s.customerPhone || '')) + '</div></td>' +
         '<td class="tiny">' + s.items.map(function (i) { return F.esc(i.name) + ' ×' + i.qty; }).join('<br>') + '</td>' +
         '<td class="num"><b>' + F.money(s.total) + '</b>' + (F.num(s.discount) > 0 ? '<div class="cell-sub">ছাড় ' + F.money(s.discount) + '</div>' : '') + '</td>' +
         '<td class="num">' + (DB.saleHasPending(s) ? '<span class="tag warn">দর বসান</span>' : '<span class="tag ok">সম্পূর্ণ</span>') + '</td>' +
         '<td><div class="row-actions">' +
-        '<button class="btn small" data-view="' + s.id + '">ইনভয়েস</button>' +
-        (s.collectionTracking === true && F.num(s.due) > 0.009 ? '<button class="btn small primary" data-collect="' + s.id + '">＋ ক্যাশ</button>' : '') +
-        (DB.saleHasPending(s) ? '<button class="btn small" data-price="' + s.id + '">দাম বসান</button>' : '') +
-        '<button class="btn small ghost" data-wa="' + s.id + '" title="কাস্টমারকে হোয়াটসঅ্যাপে বিলের হিসাব পাঠান">বিল পাঠান</button>' +
-        '<button class="btn small ghost" data-thermal="' + s.id + '" title="80mm থার্মাল রোলে ছাপুন">🧾</button>' +
-        '<button class="btn small ghost" data-a5="' + s.id + '" title="A5 কাগজে ছাপুন">A5</button>' +
-        '<button class="btn small ghost" data-del="' + s.id + '" title="ইনভয়েস মুছে ফেলুন">🗑</button>' +
+        '<button class="btn small primary" data-view="' + s.id + '">ইনভয়েস দেখুন</button>' +
+        '<button class="btn small ghost" data-actions="' + s.id + '">আরও ▾</button>' +
         '</div></td>' +
         '</tr>';
     }).join('') : UI.emptyRow(7, 'এই ফিল্টারে কোনো ইনভয়েস নেই।');
@@ -109,16 +102,7 @@ var Sales = (function () {
     }
 
     tb.querySelectorAll('[data-view]').forEach(function (b) { b.onclick = function () { UI.openInvoice(b.getAttribute('data-view')); }; });
-    tb.querySelectorAll('[data-collect]').forEach(function (b) { b.onclick = function () { Collections.open(b.getAttribute('data-collect')); }; });
-    tb.querySelectorAll('[data-wa]').forEach(function (b) { b.onclick = function () { whatsapp(DB.saleById(b.getAttribute('data-wa'))); }; });
-    tb.querySelectorAll('[data-thermal]').forEach(function (b) {
-      b.onclick = function () { UI.printInvoice(DB.saleById(b.getAttribute('data-thermal')), '80'); };
-    });
-    tb.querySelectorAll('[data-a5]').forEach(function (b) {
-      b.onclick = function () { UI.openInvoice(b.getAttribute('data-a5'), 'a5'); };
-    });
-    tb.querySelectorAll('[data-del]').forEach(function (b) { b.onclick = function () { remove(b.getAttribute('data-del')); }; });
-    tb.querySelectorAll('[data-price]').forEach(function (b) { b.onclick = function () { setPrices(b.getAttribute('data-price')); }; });
+    tb.querySelectorAll('[data-actions]').forEach(function (b) { b.onclick = function () { actions(b.getAttribute('data-actions')); }; });
 
     var total = list.reduce(function (a, s) { return a + F.num(s.total); }, 0);
     var discount = list.reduce(function (a, s) { return a + F.num(s.discount); }, 0);
@@ -130,13 +114,11 @@ var Sales = (function () {
       (discount > 0 ? '<span class="tag">ছাড় ' + F.money(discount) + '</span>' : '');
   }
 
-  function shareInvoice(s) { whatsapp(s); }
-
   function whatsapp(s) {
     s = UI.invoiceSaleView ? UI.invoiceSaleView(s) : s;
     var st = DB.state.settings;
     var lines = ['*' + st.shopName + '*', (st.address ? st.address : ''), (st.phone ? 'মোবাইল: ' + st.phone : ''), '',
-      'ইনভয়েস: ' + s.invoiceNo, 'তারিখ: ' + F.d(s.date), 'ক্রেতা: ' + (Lang.showName(s.customerNameBn || s.customerName, s.customerName) || 'ওয়াক-ইন'),
+      'ইনভয়েস: ' + s.invoiceNo, 'তারিখ: ' + F.d(s.date), 'ক্রেতা: ' + (Lang.custName(s) || 'ওয়াক-ইন'),
       (s.vehicleNo ? 'গাড়ির নম্বর: ' + s.vehicleNo : ''), ''].filter(function (x) { return !!x; });
     s.items.forEach(function (i) {
       lines.push('• ' + i.name + ' ×' + i.qty + ' = ' + F.money(i.total));
@@ -196,34 +178,16 @@ var Sales = (function () {
       s.subTotal, s.discount, s.total, s.cost, s.note]);
     });
     F.download('shoeb-motors-sales-' + F.today() + '.csv', F.csv(rows), 'text/csv');
-    UI.toast('বিক্রির হিসাব CSV ফাইলে সেভ হয়েছে (Excel-এ খুলবে)।', 'ok');
+    UI.toast('বিক্রির হিসাব CSV ফাইলে সেভ হয়েছে, Excel-এ খোলা যাবে।', 'ok');
   }
 
   function bind() {
     ['salesSearch'].forEach(function (id) { document.getElementById(id).oninput = UI.debounce(function () { salesPage = 1; render(); }, 180); });
-    ['salesDay', 'salesFrom', 'salesTo', 'salesQuick'].forEach(function (id) {
-      document.getElementById(id).onchange = function () {
-        salesPage = 1;
-        if (id === 'salesQuick' && this.value) {
-          document.getElementById('salesDay').value = '';
-          document.getElementById('salesFrom').value = '';
-          document.getElementById('salesTo').value = '';
-        }
-        if (id === 'salesDay' && this.value) {
-          document.getElementById('salesQuick').value = '';
-          document.getElementById('salesFrom').value = '';
-          document.getElementById('salesTo').value = '';
-        }
-        render();
-      };
-    });
+    document.getElementById('salesDay').onchange = function () { salesPage = 1; render(); };
     document.getElementById('salesClearFilters').onclick = function () {
       salesPage = 1;
       document.getElementById('salesSearch').value = '';
       document.getElementById('salesDay').value = '';
-      document.getElementById('salesFrom').value = '';
-      document.getElementById('salesTo').value = '';
-      document.getElementById('salesQuick').value = '';
       render();
     };
     document.getElementById('exportSalesBtn').onclick = exportCsv;
@@ -291,5 +255,5 @@ var Sales = (function () {
     });
   }
 
-  return { setPrices: setPrices, render: render, bind: bind, exportCsv: exportCsv, shareInvoice: shareInvoice, whatsapp: whatsapp };
+  return { setPrices: setPrices, render: render, bind: bind, exportCsv: exportCsv, whatsapp: whatsapp };
 })();

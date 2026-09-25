@@ -22,7 +22,7 @@
   if(m)m.setAttribute('content',r==='dark'?'#090e14':'#f5f6f7');
 })();
 </script>
-<link rel="stylesheet" href="css/style.css?v=20260924-stock-layout">
+<link rel="stylesheet" href="css/style.css?v=20260925-sale-compact">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -32,7 +32,6 @@
 
 <!-- ============ TOP BAR (সংকীর্ণ — সাইডবারের সাথে কাজ করে) ============ -->
 <header class="topbar" id="topbar" hidden>
-  <div class="topbar-page" id="topbarPage">হোম</div>
   <div class="top-right">
     <span class="cloud-pill ok" id="cloudPill" hidden></span>
     <span class="save-pill" id="savePill" hidden></span>
@@ -60,6 +59,7 @@
       <button class="nav-btn" data-view="collections">💰 <span>ক্যাশ কালেকশন</span></button>
       <button class="nav-btn" data-view="due">📋 <span>বাকি তালিকা</span></button>
       <button class="nav-btn" data-view="customers">👤 <span>কাস্টমার</span></button>
+      <button class="nav-btn owner-only" data-view="suppliers">🚚 <span>সাপ্লায়ার</span></button>
 
       <div class="nav-sep"><span>প্রশাসন</span></div>
 
@@ -97,39 +97,6 @@
   </div>
 </section>
 
-<!-- ============ SETUP WIZARD ============ -->
-<section class="view" id="view-setup" hidden>
-  <div class="setup-wrap">
-    <h1>স্বাগতম — দোকানের তথ্য দিয়ে শুরু করুন</h1>
-    
-    <div class="card">
-      <h3>১. দোকানের তথ্য</h3>
-      <div class="grid2">
-        <label>দোকানের নাম (ইংরেজি)<input id="setupShopName"></label>
-        <label>দোকানের নাম (বাংলা)<input id="setupShopNameBn"></label>
-        <label>ইনভয়েসের উপরের লেখা<input id="setupShopTag"></label>
-        <label>ঠিকানা<input id="setupAddress"></label>
-        <label>মোবাইল নম্বর (একাধিক হলে কমা দিয়ে)<input id="setupPhone"></label>
-        <label>ইনভয়েস নম্বরের শুরু<input id="setupPrefix" maxlength="5"></label>
-        <label>মুদ্রা প্রতীক<input id="setupCurrency" maxlength="3"></label>
-      </div>
-
-    </div>
-
-    <div class="card">
-      <h3>২. সিকিউরিটি পিন</h3>
-      <div class="grid2">
-        <label>মালিকের পিন (৪–৬ সংখ্যা)<input id="setupPin" type="password" inputmode="numeric" maxlength="6"></label>
-        <label>আবার পিন লিখুন<input id="setupPin2" type="password" inputmode="numeric" maxlength="6"></label>
-      </div>
-
-    </div>
-
-    <p class="err" id="setupError"></p>
-    <button class="btn primary big" id="finishSetupBtn">সেটআপ শেষ করে দোকান খুলুন</button>
-  </div>
-</section>
-
 <!-- ============ APP VIEWS ============ -->
 <main id="appMain" hidden>
 
@@ -160,9 +127,8 @@
 
     <div class="kpis kpis-clean">
       <div class="kpi"><span class="kpi-label">আজকের বিক্রি</span><span class="kpi-value" id="kpiTodaySales">—</span><span class="kpi-sub" id="kpiTodayCount">—</span></div>
-      <div class="kpi owner-only profit-report-only" hidden><span class="kpi-label">আজকের লাভ</span><span class="kpi-value" id="kpiTodayProfit">—</span><span class="kpi-sub" id="kpiTodayMargin">—</span></div>
-      <div class="kpi"><span class="kpi-label">এই মাসের ইনভয়েস</span><span class="kpi-value" id="kpiMonthInv">—</span><span class="kpi-sub" id="kpiMonthInvSub">—</span></div>
-      <div class="kpi"><span class="kpi-label">কম স্টক</span><span class="kpi-value" id="kpiLow">—</span><span class="kpi-sub" id="kpiLowSub">—</span></div>
+      <div class="kpi"><span class="kpi-label">আজকের ইনভয়েস</span><span class="kpi-value" id="kpiTodayInv">—</span><span class="kpi-sub" id="kpiTodayInvSub"></span></div>
+      <div class="kpi"><span class="kpi-label">কম স্টক</span><span class="kpi-value" id="kpiLow">—</span><span class="kpi-sub" id="kpiLowSub"></span></div>
     </div>
 
     <div class="dashboard-alerts">
@@ -175,23 +141,20 @@
       <div class="month-line dash-stat-grid">
         <div class="dash-stat"><span class="m-lab">আজ কালেকশন</span><b class="m-val" id="kpiTodayCash"></b></div>
         <div class="dash-stat"><span class="m-lab">সম্পূর্ণ</span><b class="m-val" id="kpiPaidCount"></b></div>
-        <div class="dash-stat"><span class="m-lab">আংশিক / খোলা</span><b class="m-val" id="kpiOpenCount"></b></div>
+        <div class="dash-stat"><span class="m-lab">বাকি আছে</span><b class="m-val" id="kpiOpenCount"></b></div>
         <div class="dash-stat"><span class="m-lab">দর অপেক্ষমাণ</span><b class="m-val" id="kpiPendingPrice"></b></div>
       </div>
     </div>
 
     <div class="card month-card clean-card dash-summary-card">
-      <div class="card-head dash-summary-head"><h3>এই মাসের সংক্ষিপ্ত হিসাব</h3><button class="link-btn" data-jump="reports">বিস্তারিত →</button></div>
-      <div class="month-line dash-stat-grid dash-stat-grid-month">
-        <div class="dash-stat"><span class="m-lab">বিক্রি</span><b class="m-val" id="kpiMonthSales">—</b></div>
-        <div class="dash-stat owner-only profit-report-only" hidden><span class="m-lab">লাভ</span><b class="m-val" id="kpiMonthProfit">—</b></div>
-        <div class="dash-stat"><span class="m-lab">ইনভয়েস</span><b class="m-val" id="kpiMonthCount">—</b></div>
-        <div class="dash-stat owner-only"><span class="m-lab">স্টক মূল্য</span><b class="m-val" id="kpiStockValue">—</b></div>
-        <div class="dash-stat owner-only profit-report-only" hidden><span class="m-lab">প্রত্যাশিত লাভ</span><b class="m-val" id="kpiExpectedProfit">—</b></div>
+      <div class="card-head dash-summary-head"><h3>আজকের সংক্ষিপ্ত হিসাব</h3><button class="link-btn" data-jump="reports">বিস্তারিত →</button></div>
+      <div class="month-line dash-stat-grid">
+        <div class="dash-stat"><span class="m-lab">আজকের বিলে বাকি</span><b class="m-val" id="kpiTodayNewDue">—</b></div>
+        <div class="dash-stat"><span class="m-lab">পুরোনো বাকি আদায়</span><b class="m-val" id="kpiTodayOldCollected">—</b></div>
+        <div class="dash-stat dash-stat-link" data-jump="due"><span class="m-lab">মেয়াদ পার হওয়া বাকি</span><b class="m-val" id="kpiOverdue">—</b></div>
+        <div class="dash-stat dash-stat-link" data-jump="due"><span class="m-lab">মোট পাওনা</span><b class="m-val" id="kpiTotalReceivable">—</b></div>
       </div>
     </div>
-
-    <div id="dashTiles" hidden></div>
   </section>
 
   <!-- ---------- NEW SALE (POS) ---------- -->
@@ -241,7 +204,7 @@
           </div>
           <div class="sale-cart-scroll">
             <table class="table" id="cartTable">
-              <thead><tr><th class="num" style="width:52px">ক্রম</th><th>বিবরণ</th><th>ব্র্যান্ড</th><th>সাইজ</th><th class="num" style="width:150px">পরিমাণ</th><th class="num">দর</th><th class="num">টাকা</th><th></th></tr></thead>
+              <thead><tr><th class="num" style="width:52px">ক্রম</th><th>বিবরণ</th><th>ব্র্যান্ড</th><th>সাইজ</th><th class="num" style="width:150px">পরিমাণ</th><th class="num col-rate">দর</th><th class="num col-amount">টাকা</th><th></th></tr></thead>
               <tbody><tr class="empty-row"><td colspan="8"></td></tr></tbody>
             </table>
           </div>
@@ -261,7 +224,7 @@
           </div>
 
           <div class="sale-discount-box">
-            <label for="billDiscount">ছাড় দিন (৳)</label>
+            <label for="billDiscount">ছাড় দিন</label>
             <div class="sale-money-input"><span>৳</span><input id="billDiscount" class="disc-input" type="text" inputmode="decimal" autocomplete="off"></div>
             <div class="sale-discount-reason" id="discReasonRow" hidden>
               <label for="billDiscountReason">ছাড়ের কারণ</label>
@@ -291,7 +254,6 @@
             </div>
           </div>
 
-          <div class="sale-profit-line owner-only profit-report-only" hidden><span>সম্ভাব্য লাভ</span><strong id="billProfit">—</strong></div>
           <div class="due-line warnline" id="billPendHint" hidden></div>
           <p class="err" id="saleError"></p>
           <button class="btn primary big full sale-invoice-btn" id="saveSaleBtn">ইনভয়েস তৈরি করুন</button>
@@ -364,19 +326,11 @@
     <div class="card">
       <div class="row wrap filters">
         <input id="salesSearch" class="grow">
-        <label class="filter-label">একদিন<input type="date" id="salesDay"></label>
-        <select id="salesQuick" title="দিন / সপ্তাহ / মাস অনুযায়ী দেখুন">
-          <option value="">সব সময়</option>
-          <option value="today">আজ</option>
-          <option value="week">শেষ ৭ দিন</option>
-          <option value="month">এই মাস</option>
-        </select>
-        <details class="advanced-filter"><summary>আরও তারিখ</summary><div class="row"><input type="date" id="salesFrom"><span>—</span><input type="date" id="salesTo"></div></details>
-        <button class="btn ghost small" id="salesClearFilters">রিসেট</button>
+        <input type="date" id="salesDay" aria-label="তারিখ">
+        <button class="btn ghost small" id="salesClearFilters">সব ইনভয়েস</button>
       </div>
       <div class="invoice-range-summary" id="salesRangeSummary"></div>
       <div class="row wrap totals" id="salesTotals"></div>
-      <div class="day-counts" id="salesDayBreakdown"></div>
       <div class="table-scroll">
         <table class="table" id="salesTable">
           <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>ক্রেতা</th><th>আইটেম</th><th class="num">মোট</th><th class="num">দর</th><th></th></tr></thead>
@@ -391,7 +345,6 @@
   <section class="view" id="view-collections" hidden>
     <div class="page-head">
       <div><h1>ক্যাশ কালেকশন</h1></div>
-      <div class="row"><button class="btn ghost" id="collectionTodayBtn">আজ</button><button class="btn ghost" id="collectionAllDueBtn">সব Due</button></div>
     </div>
 
     <div class="collection-kpis" id="collectionKpis"></div>
@@ -399,15 +352,7 @@
     <div class="card">
       <div class="row wrap filters">
         <input id="collectionSearch" class="grow">
-        <label class="filter-label">শুরু<input type="date" id="collectionStart"></label>
-        <label class="filter-label">শেষ<input type="date" id="collectionEnd"></label>
-        <label class="filter-label">তারিখ<input type="date" id="collectionDay"></label>
-        <select id="collectionScope">
-          <option value="day">নির্বাচিত দিনের ইনভয়েস</option>
-          <option value="range">তারিখ পরিসীমা</option>
-          <option value="due">যেসব ইনভয়েসে Due আছে</option>
-          <option value="all">সব ট্র্যাক করা ইনভয়েস</option>
-        </select>
+        <input type="date" id="collectionDay" aria-label="তারিখ">
       </div>
       <div class="table-scroll">
         <table class="table" id="collectionTable">
@@ -484,7 +429,7 @@
       <div class="card">
         <div class="card-head"><h3>ক্যাশ মিলান</h3></div>
 
-        <label>দিনের খরচ (৳)
+        <label>দিনের খরচ
           <input id="closingExpense" type="number" min="0" step="0.01" inputmode="decimal">
         </label>
         <div class="closing-adjusted-cash" style="margin-top:8px">
@@ -533,7 +478,7 @@
       </div>
       <div class="table-scroll">
         <table class="table" id="custTable">
-          <thead><tr><th>নাম</th><th>মোবাইল</th><th>গাড়ি</th><th class="num">বিক্রি</th><th class="num">মোট কেনা</th><th>শেষ এসেছেন</th><th>কাজ</th></tr></thead>
+          <thead><tr><th>নাম</th><th>মোবাইল</th><th>গাড়ি</th><th class="num">বিক্রি</th><th class="num">মোট কেনা</th><th>শেষ এসেছেন</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -550,8 +495,6 @@
         <div><h1 id="cpName">কাস্টমার</h1><p class="muted small" id="cpMeta"></p></div>
       </div>
       <div class="row">
-        <button class="btn" id="cpOpeningBtn">আগের বকেয়া যোগ / সংশোধন</button>
-        <button class="btn" id="cpOpeningCollectBtn">আগের বকেয়া আদায়</button>
         <button class="btn" id="cpEditBtn">তথ্য বদলান</button>
         <button class="btn ghost" id="cpAddVehicleBtn">＋ গাড়ি যোগ করুন</button>
         <button class="btn primary" id="cpNewSaleBtn">＋ নতুন বিক্রি</button>
@@ -573,11 +516,61 @@
     </div>
 
     <div class="card">
-      <div class="card-head"><h3>কেনাকাটার হিসাব</h3><span class="tag" id="cpTotals"></span></div>
+      <div class="card-head"><h3>কেনাকাটার হিসাব</h3><div class="row"><span class="tag" id="cpTotals"></span><button class="btn small" id="cpAddOpeningBtn">＋ আগের বকেয়া</button><button class="btn small primary" id="cpPayDueBtn" hidden>বকেয়া জমা</button></div></div>
       <table class="table" id="cpSales">
-        <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>আইটেম</th><th class="num">মূল বিল</th><th class="num">ছাড়</th><th class="num">চূড়ান্ত বিল</th><th></th></tr></thead>
+        <thead><tr><th>ইনভয়েস</th><th>তারিখ</th><th>আইটেম</th><th class="num">মূল বিল</th><th class="num">ছাড়</th><th class="num">চূড়ান্ত বিল</th><th class="num">জমা</th><th class="num">বাকি</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ---------- SUPPLIERS ---------- -->
+  <section class="view owner-section" id="view-suppliers" hidden>
+    <div class="page-head">
+      <div><h1>সাপ্লায়ার</h1></div>
+      <div class="row"><button class="btn primary" id="addSupplierBtn">＋ নতুন সাপ্লায়ার</button></div>
+    </div>
+    <div class="kpis" id="supKpis"></div>
+    <div class="card">
+      <div class="row wrap filters"><input id="supSearch" class="grow" autocomplete="off"></div>
+      <div class="table-scroll">
+        <table class="table" id="supTable">
+          <thead><tr><th>নাম</th><th>মোবাইল</th><th class="num">মোট কেনা</th><th class="num">দিয়েছি</th><th class="num">বাকি</th><th>শেষ কেনা</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- SUPPLIER DETAIL ---------- -->
+  <section class="view owner-section" id="view-supplier" hidden>
+    <div class="page-head">
+      <div class="row">
+        <button class="btn ghost small" id="supProfileBack">← ফিরে যান</button>
+        <div><h1 id="spName">সাপ্লায়ার</h1><p class="muted small" id="spMeta"></p></div>
+      </div>
+      <div class="row">
+        <button class="btn" id="spOpeningBtn">＋ আগের বাকি</button>
+        <button class="btn" id="spEditBtn">তথ্য বদলান</button>
+        <button class="btn primary" id="spPayBtn">টাকা দিন</button>
+      </div>
+    </div>
+    <div class="kpis" id="spKpis"></div>
+    <div class="grid-2col">
+      <div class="card">
+        <div class="card-head"><h3>কেনা মাল</h3></div>
+        <div class="table-scroll"><table class="table compact" id="spPurchases">
+          <thead><tr><th>তারিখ</th><th>পণ্য</th><th class="num">পরিমাণ</th><th class="num">দর</th><th class="num">মোট</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>দেওয়া টাকা</h3></div>
+        <div class="table-scroll"><table class="table compact" id="spPayments">
+          <thead><tr><th>তারিখ</th><th>নোট</th><th class="num">টাকা</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
     </div>
   </section>
 
@@ -604,8 +597,6 @@
 
     <div class="kpis" id="repKpis"></div>
 
-    <div class="row report-current-facts muted small" id="repCurrentFacts"></div>
-
     <div class="card">
       <div class="card-head">
         <h3 id="anaChartTitle">বিক্রি — শেষ ১ মাস</h3>
@@ -624,12 +615,12 @@
     </div>
 
     <div class="report-cards-flow">
-      <div class="card">
-        <div class="card-head"><h3>লাভ-ক্ষতির হিসাব</h3></div>
-        <table class="table" id="repPL"></table>
+      <div class="card owner-only report-wide" id="repStockCard">
+        <div class="card-head"><h3>স্টক মূল্য</h3><span class="tag" id="repStockTotal"></span></div>
+        <div class="table-scroll"><table class="table compact" id="repStock"></table></div>
       </div>
 
-      <div class="card" id="repTopCustomersCard">
+      <div class="card report-wide" id="repTopCustomersCard">
         <div class="card-head">
           <h3 id="repTopCustomersTitle">শীর্ষ ১০ কাস্টমার</h3>
           <select id="repCustomerSort" aria-label="কাস্টমার সাজান">
@@ -640,12 +631,12 @@
         <div class="table-scroll"><table class="table compact" id="repTopCustomers"></table></div>
       </div>
 
-      <div class="card">
+      <div class="card report-wide">
         <div class="card-head"><h3>দিন অনুযায়ী বিক্রি</h3></div>
         <div class="table-scroll"><table class="table compact" id="repDaily"></table></div>
       </div>
 
-      <div class="card">
+      <div class="card report-wide">
         <div class="card-head">
           <h3>পণ্য অনুযায়ী বিক্রি</h3>
           <select id="repProductSort" aria-label="পণ্য সাজান">
@@ -666,13 +657,13 @@
 
     <div class="settings-layout">
       <div class="card settings-card settings-invoice">
-        <div class="card-head"><h3>ইনভয়েস সেটিংস (ইনভয়েসে যা যা ছাপা হবে)</h3></div>
+        <div class="card-head"><h3>ইনভয়েস সেটিংস</h3></div>
         <div class="grid2">
-          <label>দোকানের নাম (ইংরেজি)<input id="setShopName"></label>
-          <label>দোকানের নাম (বাংলা)<input id="setShopNameBn"></label>
+          <label>দোকানের নাম ইংরেজিতে<input id="setShopName"></label>
+          <label>দোকানের নাম বাংলায়<input id="setShopNameBn"></label>
           <label>ইনভয়েসের উপরের লেখা<input id="setShopTag"></label>
           <label>ঠিকানা<input id="setAddress"></label>
-          <label>মোবাইল নম্বর (একাধিক হলে কমা দিয়ে লিখুন)<input id="setPhone"></label>
+          <label>মোবাইল নম্বর<input id="setPhone"></label>
           <label>মুদ্রা প্রতীক<input id="setCurrency" maxlength="3"></label>
           <label>ইনভয়েস নম্বরের শুরু<input id="setPrefix" maxlength="5"></label>
           <label>ছাড়ের নোট<input id="setDiscountNote"></label>
@@ -720,7 +711,7 @@
         <label>প্রোগ্রামের ভাষা
           <select id="setLang">
             <option value="bn">বাংলা</option>
-            <option value="en">English (ইংরেজি)</option>
+            <option value="en">English</option>
           </select>
         </label>
       </div>
@@ -778,23 +769,24 @@
 <!-- ============ PRINT AREA ============ -->
 <div id="printRoot" class="print-root"></div>
 
-<script src="js/store.js?v=1221-20260923"></script>
-<script src="js/cloud.js?v=1215-20260920"></script>
-<script src="js/theme.js?v=1215-20260920"></script>
-<script src="js/lang.js?v=1215-20260920"></script>
-<script src="js/format.js?v=1215-20260920"></script>
-<script src="js/ui.js?v=20260924-hide-discount2"></script>
-<script src="js/customers.js?v=20260924-no-note"></script>
-<script src="js/stock.js?v=20260924-stock-layout"></script>
-<script src="js/sale.js?v=20260924-walkin-cash"></script>
-<script src="js/sales.js?v=20260924-hide-discount"></script>
-<script src="js/collections.js?v=1221-20260923"></script>
-<script src="js/due.js?v=1221-20260923"></script>
-<script src="js/dayclosing.js?v=1221-20260923"></script>
-<script src="js/dashboard.js?v=1215-20260920"></script>
-<script src="js/reports.js?v=1215-20260920"></script>
-<script src="js/settings.js?v=1215-20260920"></script>
-<script src="js/app.js?v=1215-20260920"></script>
+<script src="js/store.js?v=20260925-sale-compact"></script>
+<script src="js/cloud.js?v=20260925-sale-compact"></script>
+<script src="js/theme.js?v=20260925-sale-compact"></script>
+<script src="js/lang.js?v=20260925-sale-compact"></script>
+<script src="js/format.js?v=20260925-sale-compact"></script>
+<script src="js/ui.js?v=20260925-sale-compact"></script>
+<script src="js/customers.js?v=20260925-sale-compact"></script>
+<script src="js/suppliers.js?v=20260925-sale-compact"></script>
+<script src="js/stock.js?v=20260925-sale-compact"></script>
+<script src="js/sale.js?v=20260925-sale-compact"></script>
+<script src="js/sales.js?v=20260925-sale-compact"></script>
+<script src="js/collections.js?v=20260925-sale-compact"></script>
+<script src="js/due.js?v=20260925-sale-compact"></script>
+<script src="js/dayclosing.js?v=20260925-sale-compact"></script>
+<script src="js/dashboard.js?v=20260925-sale-compact"></script>
+<script src="js/reports.js?v=20260925-sale-compact"></script>
+<script src="js/settings.js?v=20260925-sale-compact"></script>
+<script src="js/app.js?v=20260925-sale-compact"></script>
 <script>
 /* Local-server build: persistent PWA caching is intentionally disabled.
    Older Shoeb Motors releases used cache-first service workers, which could mix

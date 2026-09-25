@@ -7,20 +7,12 @@ var Dashboard = (function () {
   function pcs(list) {
     return sum(list, function (s) { return (s.items || []).reduce(function (x, i) { return x + F.num(i.qty); }, 0); });
   }
-  function monthRange() { return { from: F.startOfMonth(), to: F.today() }; }
-  function moneyWords(v) {
-    var en = (window.Lang && typeof Lang.isEn === 'function') ? Lang.isEn() : !!(DB.state && DB.state.settings && DB.state.settings.lang === 'en');
-    return en ? F.wordsMoney(v) : F.wordsMoneyBn(v);
-  }
   function setDashboardMoney(id, v) {
     var el = document.getElementById(id);
     if (!el) return;
     el.textContent = F.money(v);
-    el.title = moneyWords(v);
   }
-  function moneyWithHover(v) {
-    return '<span title="' + F.esc(moneyWords(v)) + '">' + F.money(v) + '</span>';
-  }
+  function moneyWithHover(v) { return F.money(v); }
 
   function render() {
     var today = F.today();
@@ -29,10 +21,11 @@ var Dashboard = (function () {
     /* --- আজ --- */
     var todayList = sales.filter(function (s) { return DB.todayStr(s.date) === today; });
     var tSales = sum(todayList, function (s) { return s.total; });
-    var tProfit = sum(todayList, function (s) { return s.profit; });
 
     setDashboardMoney('kpiTodaySales', tSales);
-    document.getElementById('kpiTodayCount').textContent = todayList.length + ' টি ইনভয়েস · ' + F.qty(pcs(todayList)) + ' পিস';
+    var tsEl = document.getElementById('kpiTodaySales');
+    if (tsEl) { tsEl.title = tSales > 0 ? F.moneyWords(tSales) : ''; tsEl.classList.toggle('money-words', tSales > 0); }
+    document.getElementById('kpiTodayCount').textContent = F.qty(pcs(todayList)) + ' পিস বিক্রি';
 
     /* --- আজকের cash collection status --- */
     var todayCollections = DB.collectionsInRange(today, today);
@@ -50,7 +43,7 @@ var Dashboard = (function () {
     /* --- স্টক কম --- */
     var low = DB.lowStockList();
     document.getElementById('kpiLow').textContent = low.length;
-    document.getElementById('kpiLowSub').textContent = low.length ? 'পণ্য শেষ হয়ে যাচ্ছে — যোগ করুন' : 'সব পণ্যের স্টক ঠিক আছে';
+    document.getElementById('kpiLowSub').textContent = '';
 
     /* --- চোখে পড়ার মতো Low Stock warning --- */
     var lowBanner = document.getElementById('lowStockBanner');
@@ -76,24 +69,40 @@ var Dashboard = (function () {
     reminders.forEach(function (s) {
       var phoneKey = String(s.customerPhone || '').replace(/\D+/g, '');
       var key = s.customerId ? ('id:' + s.customerId) : (phoneKey ? ('ph:' + phoneKey) : ('nm:' + (s.customerNameBn || s.customerName || '')));
-      if (!remMap[key]) remMap[key] = { name: (s.customerNameBn || s.customerName || 'ওয়াক-ইন কাস্টমার'), phone: s.customerPhone || '', due: 0, date: s.dueReminderDate };
+      if (!remMap[key]) remMap[key] = { name: (Lang.custName(s) || 'ওয়াক-ইন কাস্টমার'), phone: s.customerPhone || '', due: 0, date: s.dueReminderDate };
       remMap[key].due += DB.trueDue(s);
       if (s.dueReminderDate < remMap[key].date) remMap[key].date = s.dueReminderDate;
     });
     var remList = Object.keys(remMap).map(function (k) { remMap[k].due = DB.round2(remMap[k].due); return remMap[k]; })
       .sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
 
-    var kd = document.getElementById('kpiDueReminder'); if (kd) kd.textContent = remList.length;
-    var kds = document.getElementById('kpiDueReminderSub'); if (kds) kds.textContent = remList.length ? 'মেয়াদ পার হওয়া বাকি — টাকা তুলুন' : 'কোনো বাকি রিমাইন্ডার নেই';
+
+    /* আজকের কার্ড: আজকের বিলে কত বাকি রইল, আর আজ আগের দিনের ইনভয়েস / আগের বকেয়া থেকে কত পেলাম */
+    setDashboardMoney('kpiTodayNewDue', sum(finalToday, function (s) { return DB.trueDue(s); }));
+    setDashboardMoney('kpiTodayOldCollected', sum(todayCollections, function (r) {
+      if (r.openingBalance) return r.amount;
+      var rs = r.saleId && DB.saleById(r.saleId);
+      return rs && DB.todayStr(rs.date) < today ? r.amount : 0;
+    }));
+
+    /* আজকের কার্ড: যাদের টাকা দেওয়ার তারিখ পার হয়েছে, আর সব কাস্টমারের মোট পাওনা */
+    var overdueTotal = DB.round2(remList.reduce(function (a, x) { return a + x.due; }, 0));
+    var ov = document.getElementById('kpiOverdue');
+    if (ov) {
+      ov.innerHTML = remList.length ? moneyWithHover(overdueTotal) + ' <small>· ' + remList.length + ' জন</small>' : '০ জন';
+      ov.classList.toggle('pend', remList.length > 0);
+    }
+    setDashboardMoney('kpiTotalReceivable', DB.trackedDueTotal());
 
     var dueBanner = document.getElementById('dueReminderBanner');
     if (dueBanner) {
       if (remList.length) {
         var remNames = remList.slice(0, 5).map(function (x) {
-          return F.esc(x.name) + (x.phone ? ' (' + F.esc(x.phone) + ')' : '') + ' — ' + moneyWithHover(x.due);
+          return F.esc(x.name) + (x.phone ? ' ' + F.esc(x.phone) : '') + ' — ' + moneyWithHover(x.due);
         }).join(' · ');
         dueBanner.hidden = false;
-        dueBanner.innerHTML = '<div><b>⚠ বাকি রিমাইন্ডার: ' + remList.length + ' জন</b><span>' + remNames + (remList.length > 5 ? ' · আরও ' + (remList.length - 5) + ' জন' : '') + '</span></div>' +
+        var en = window.Lang && Lang.isEn();
+        dueBanner.innerHTML = '<div><b>⚠ ' + (en ? 'Due reminder: ' + remList.length + ' customers' : 'বাকি রিমাইন্ডার: ' + remList.length + ' জন') + '</b><span>' + remNames + (remList.length > 5 ? (en ? ' · ' + (remList.length - 5) + ' more' : ' · আরও ' + (remList.length - 5) + ' জন') : '') + '</span></div>' +
           '<button class="btn small" id="dueReminderOpenBtn">বাকি তালিকা দেখুন →</button>';
         var dueBtn = document.getElementById('dueReminderOpenBtn');
         if (dueBtn) dueBtn.onclick = function () { App.show('due'); };
@@ -103,54 +112,10 @@ var Dashboard = (function () {
       }
     }
 
-    /* --- এই মাসের এক লাইন --- */
-    var mr = monthRange();
-    var monthList = DB.salesInRange(mr.from, mr.to);
-    var mSales = sum(monthList, function (s) { return s.total; });
-    var stockVal = DB.stockValue();
-    setDashboardMoney('kpiMonthSales', mSales);
-    document.getElementById('kpiMonthCount').textContent = monthList.length;
-    setDashboardMoney('kpiStockValue', stockVal);
-    document.getElementById('kpiMonthInv').textContent = monthList.length;
-    document.getElementById('kpiMonthInvSub').textContent = F.qty(pcs(monthList)) + ' পিস বিক্রি';
+    /* --- আজকের ইনভয়েস --- */
+    document.getElementById('kpiTodayInv').textContent = todayList.length;
 
     document.getElementById('dashDate').textContent = F.weekday(today) + ', ' + F.d(today);
-
-    /* --- বিস্তারিত পাতার দরজা (tiles) --- */
-    var stockQty = sum(DB.state.products, function (p) { return p.qty; });
-    var tiles = [
-      {
-        jump: 'reports', cls: 't-red', label: 'রিপোর্ট',
-        value: moneyWithHover(mSales), sub: 'দিনভিত্তিক ও পণ্যভিত্তিক বিক্রির হিসাব'
-      },
-      {
-        jump: 'customers', cls: 't-amber', label: 'কাস্টমার',
-        value: DB.state.customers.length + ' জন', sub: 'কাস্টমার, মোবাইল ও গাড়ির তথ্য এক জায়গায়'
-      },
-      {
-        jump: 'sales', cls: 't-ink', label: 'বিক্রি ও ইনভয়েস',
-        value: invCount(monthList) + ' টি', sub: 'এই মাসের ইনভয়েস — যেকোনো বিল খুলে আবার ছাপতে পারবেন'
-      },
-      {
-        jump: 'stock', cls: 't-slate', label: 'স্টক ও মূল্য',
-        value: moneyWithHover(stockVal), sub: DB.state.products.length + ' ধরনের পণ্য · ' + F.qty(stockQty) + ' পিস' + (low.length ? ' · কম ' + low.length + ' টি' : '')
-      },
-      {
-        jump: 'dayclosing', cls: 't-ink owner-only', label: 'Day Closing',
-        value: DB.dayClosingByDate(today) ? '✓ Closed' : ((window.Lang && Lang.isEn()) ? 'Close today' : 'আজ Close করুন'),
-        sub: 'Expected Cash ' + moneyWithHover(DayClosing.metrics(today).expectedCash) + ' · ' + ((window.Lang && Lang.isEn()) ? 'reconcile counted cash and finish the day' : 'হাতে গোনা ক্যাশ মিলিয়ে দিন শেষ করুন')
-      }
-    ];
-    var box = document.getElementById('dashTiles');
-    box.innerHTML = tiles.map(function (t) {
-      return '<button class="tile ' + t.cls + '" data-jump="' + t.jump + '">' +
-        '<span class="t-lab">' + t.label + '</span>' +
-        '<span class="t-val">' + t.value + '</span>' +
-        '<span class="t-sub">' + t.sub + '</span>' +
-        '<span class="t-go">খুলুন →</span>' +
-        '</button>';
-    }).join('');
-    wireJumps(box);
   }
 
   /* ---------------- পাতার লিংক ---------------- */

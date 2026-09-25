@@ -5,22 +5,21 @@
 var Lang = (function () {
   var D = {
     /* ---------- মেনু ও শিরোনাম ---------- */
-    'ড্যাশবোর্ড': 'Dashboard', 'নতুন বিক্রি': 'New sale', 'স্টক': 'Stock',
+    'ড্যাশবোর্ড': 'Dashboard', 'স্টক': 'Stock',
     'বিক্রি ও ইনভয়েস': 'Sales & invoices', 'ক্যাশ কালেকশন': 'Cash Collection', 'ক্যাশ কালেকশন →': 'Cash Collection →', 'দিনের হিসাব বন্ধ': 'Day Closing', 'কাস্টমার': 'Customers', 'গ্রাহক': 'Customers',
     'খরচ': 'Expenses', 'রিপোর্ট': 'Reports', 'সেটিংস': 'Settings',
     'সেটিংস ও ব্যাকআপ': 'Settings', 'স্টক / টায়ারের তালিকা': 'Stock / tyres', 'প্রশাসন': 'Admin', 'মোট পণ্য': 'Total items', 'মোট পরিমাণ': 'Total items',
     'দোকানের খরচ': 'Shop expenses', 'দোকান পরিচালনা': 'Shop manager',
     'দোকানের কাজের জায়গা': 'SHOP WORKSPACE', 'সোয়েব মটরস এন্ড টায়ার হাউস': 'Shoeb Motors & Tyre House',
     'সতর্কতা': 'Caution', 'নিরাপত্তা': 'Security', 'ভাষা / Language': 'Language',
-    'দিনের খরচ (৳)': 'Day expense (৳)', 'হাতে গোনা ক্যাশ': 'Actual Cash', 'সমাপনী নোট': 'Closing note',
+    'দিনের খরচ (৳)': 'Day expense (৳)', 'সমাপনী নোট': 'Closing note',
     '✓ দিনের হিসাব সেভ করুন': '✓ Save Day Closing', 'দিনের হিসাব বন্ধের ইতিহাস': 'Day Closing history',
     'তথ্য': 'Details', 'কাজ': 'Actions', 'মালিকের অনুমতি': 'Owner permission',
-    'ইনভয়েসের তারিখ': 'Invoice date', 'সময়': 'Time', 'কালেকশন': 'Collection', 'কালেকশন হিস্ট্রি': 'Collection history',
-    'নির্বাচিত দিনের ইনভয়েস': 'Invoices on selected day', 'সেদিন ক্যাশ কালেকশন': 'Cash collected that day',
+    'ইনভয়েসের তারিখ': 'Invoice date', 'সময়': 'Time',
+    'সেদিন ক্যাশ কালেকশন': 'Cash collected that day',
     'সেদিনের ইনভয়েসে বর্তমান Due': 'Current Due on that day’s invoices', 'সব ট্র্যাক করা Due': 'All tracked Due',
-    'যেসব ইনভয়েসে Due আছে': 'Invoices with Due', 'সব ট্র্যাক করা ইনভয়েস': 'All tracked invoices',
     /* ---------- বোতাম ---------- */
-    'খুলুন': 'Open', 'বাতিল': 'Cancel', 'মুছে ফেলুন': 'Clear', 'রেখে দিন': 'Hold',
+    'বাতিল': 'Cancel', 'মুছে ফেলুন': 'Clear', 'রেখে দিন': 'Hold',
     'রাখা বিল খুলুন': 'Open held bill', 'পুরোটা': 'Full', 'স্টকে যোগ করুন': 'Add to stock',
     'পরিবর্তন সেভ করুন': 'Save changes', 'সেটিংস সেভ করুন': 'Save settings',
     'ইনভয়েস তৈরি করুন': 'Make invoice',
@@ -31,12 +30,12 @@ var Lang = (function () {
     'পিন তৈরি করুন': 'Create PIN',
     'CSV এক্সপোর্ট': 'Export CSV', 'নতুন টায়ার স্টকে যোগ করুন': 'Add new tyre',
     '＋ নতুন টায়ার স্টকে যোগ করুন': '＋ Add new tyre', 'স্টকে নতুন টায়ার যোগ করুন': 'Add new tyre to stock',
-    'নতুন কাস্টমার': 'New customer', '＋ নতুন কাস্টমার': '＋ New customer', 'নতুন খরচ': 'New expense',
+    '＋ নতুন কাস্টমার': '＋ New customer', 'নতুন খরচ': 'New expense',
     'বিস্তারিত': 'Details', 'বদলান': 'Edit', 'তথ্য বদলান': 'Edit', 'গাড়ি যোগ করুন': 'Add vehicle',
     '＋ গাড়ি যোগ করুন': '＋ Add vehicle', 'ফিরে যান': 'Back', 'সব দেখুন →': 'View all',
     'সব কাস্টমার →': 'All customers', 'রিসেট': 'Reset', 'ইনভয়েস': 'Invoice', 'প্রিন্ট': 'Print',
     'মুছুন': 'Clear', 'ওয়াক-ইন': 'Walk-in', 'প্রোফাইল': 'Profile', 'টাকা নিন': 'Take payment',
-    'স্টক যোগ': 'Add stock', '＋ স্টক': '＋ Stock', '＋ যোগ': '＋ Add', 'সেভ করুন': 'Save',
+    '＋ স্টক': '＋ Stock', '＋ যোগ': '＋ Add',
     'সব মুছে ফেলুন': 'Delete all', 'বিলে যোগ করুন': 'Add to bill', 'কাস্টমার সেভ করুন': 'Save customer',
     'টাকা জমা সেভ করুন': 'Save payment', 'খরচ সেভ করুন': 'Save expense', 'নিশ্চিত করুন': 'Confirm',
     'হ্যাঁ, লোড করুন': 'Yes, load', 'হ্যাঁ, মুছে ফেলুন': 'Yes, delete', 'হ্যাঁ, ফিরিয়ে আনুন': 'Yes, restore',
@@ -48,7 +47,7 @@ var Lang = (function () {
     'ইনভয়েস কোন কাগজে ছাপবেন? সাধারণত A4।': 'Which paper for the invoice? Usually A4.',
     '80mm থার্মাল রোলে ছাপুন': 'Print on 80mm thermal roll',
     'A4 (স্বাভাবিক)': 'A4 (normal)', 'A4 (ডিফল্ট)': 'A4 (default)', 'A5 (ডিফল্ট)': 'A5 (default)',
-    '🖨 প্রিন্ট': '🖨 Print', '✕ বন্ধ করুন': '✕ Close', 'বন্ধ করুন': 'Close',
+    '🖨 প্রিন্ট': '🖨 Print', '✕ বন্ধ করুন': '✕ Close',
     'নতুন জানালায় খুলুন': 'Open in a new window',
     'নতুন জানালা খোলা যায়নি — ইনভয়েসটি এখানেই দেখানো হচ্ছে।': 'Could not open a new window — showing the invoice here.',
     'ব্রাউজারে নতুন জানালা বন্ধ আছে — উপরের ✕ চিহ্নে চাপ দিয়ে অনুমতি দিন।': 'The browser blocked the new window — allow it from the ✕ icon in the address bar.',
@@ -57,23 +56,23 @@ var Lang = (function () {
     'সেটআপ শেষ করে দোকান খুলুন': 'Finish setup & open shop', 'লক': 'Lock',
     '🔒 লক': '🔒 Lock', '🔓 মালিক': '🔓 Owner', 'ডেটা ফোল্ডার:': 'Data folder:',
     'রিসেট করুন': 'Reset', '＋ নতুন বিক্রি': '＋ New sale', '＋ স্টক যোগ করুন': '＋ Add stock',
-    '＋ ক্যাশ': '＋ Cash', '💵 ক্যাশ কালেকশন': '💵 Cash Collection', 'কালেকশন সেভ করুন': 'Save collection', 'এন্ট্রি বাতিল করুন': 'Cancel entry',
+    '💵 ক্যাশ কালেকশন': '💵 Cash Collection', 'কালেকশন সেভ করুন': 'Save collection', 'এন্ট্রি বাতিল করুন': 'Cancel entry',
     /* ---------- লেবেল / কলাম ---------- */
-    'ক্রম': 'SL', 'বিবরণ': 'Description', 'পরিমাণ': 'Qty', 'দর': 'Rate', 'টাকা': 'Amount',
-    'দর (৳)': 'Rate (৳)', 'টাকা (৳)': 'Amount (৳)', 'মোট': 'Total', 'লাভ': 'Profit',
-    'লাভ/পিস': 'Profit/pc', 'ব্র্যান্ড': 'Brand', 'সাইজ': 'Size', 'মডেল': 'Model',
+    'ক্রম': 'SL', 'পরিমাণ': 'Qty', 'দর': 'Rate', 'টাকা': 'Amount',
+    'দর (৳)': 'Rate (৳)', 'টাকা (৳)': 'Amount (৳)', 'লাভ': 'Profit',
+    'লাভ/পিস': 'Profit/pc', 'ব্র্যান্ড': 'Brand', 'সাইজ': 'Size',
     'গাড়ি': 'Vehicle', 'গাড়ির নম্বর': 'Vehicle no.', 'গাড়ির নম্বর:': 'Vehicle no.:',
     'বিক্রয়মূল্য': 'Selling price', 'ক্রয়মূল্য': 'Buy price', 'স্টকে আছে': 'In stock',
     'শেষ এসেছেন': 'Last visit', 'মোট কেনা': 'Total bought', 'বিক্রি': 'Sales', 'বিক্রি (পিস)': 'Sales (pcs)',
     'নাম': 'Name', 'নাম (বাংলা)': 'Name (Bangla)', 'মোবাইল': 'Mobile', 'মোবাইল নম্বর': 'Mobile no.',
     'ক্রেতা': 'Customer', 'ক্রেতার নাম': 'Customer name', 'ঠিকানা': 'Address', 'তারিখ': 'Date',
-    'তারিখ *': 'Date', 'বাকি': 'Due', 'বাকি আছে': 'Due', 'পরিশোধ': 'Paid', 'অবস্থা': 'Status',
+    'তারিখ *': 'Date', 'বাকি': 'Due', 'পরিশোধ': 'Paid', 'অবস্থা': 'Status',
     'পেমেন্ট': 'Payment', 'উপমোট': 'Subtotal', 'সর্বমোট': 'Grand total', 'সর্বমোট (৳)': 'Grand total (৳)',
-    'আইটেম': 'Items', 'নোট': 'Note', 'নোট': 'Note', 'কথায়:': 'In words:',
+    'আইটেম': 'Items', 'কথায়:': 'In words:',
     'ছাড়': 'Discount', 'দর মুছুন': 'Remove price', 'দাম বসান': 'Set price', 'দাম দেওয়া হয়নি': 'Price not set', 'দর বসান (নিশ্চিত হয়নি)': 'Set price (unconfirmed)', 'মূল্য পরিশোধের রসিদ': 'Payment receipt', 'ছাড় দিন (৳)': 'Give discount (৳)', 'ছাড়ের কারণ': 'Discount reason',
     'দেওয়া ছাড়': 'Discount given', 'সর্বমোট ছাড়': 'Total discount', 'মোট লাভ': 'Total profit',
     'নিট লাভ': 'Net profit', 'সম্ভাব্য লাভ': 'Expected profit', 'মোট বিক্রি': 'Total sales',
-    'আজকের বিক্রি': "Today's sales", 'আজকের লাভ': "Today's profit", 'আজকের ক্যাশ অবস্থা': "Today's cash status", 'আজ কালেকশন': "Today's collection", 'এই মাসের বিক্রি': "This month's sales", 'এই মাসের লাভ': "This month's profit",
+    'আজকের ক্যাশ অবস্থা': "Today's cash status", 'আজ কালেকশন': "Today's collection", 'এই মাসের বিক্রি': "This month's sales", 'এই মাসের লাভ': "This month's profit",
     'এই মাসে': 'This month', 'স্টকের মূল্য': 'Stock value', 'স্টকের মূল্য (ক্রয়মূল্যে)': 'Stock value (at cost)',
     'আদায়যোগ্য বাকি': 'Receivable due', 'স্টক কম আছে': 'Low stock', 'স্টক কমে গেছে': 'Low stock',
     'সাম্প্রতিক ইনভয়েস': 'Recent invoices', 'কালেকশন হিস্ট্রি': 'Collection history', 'সবচেয়ে বেশি বিক্রি হওয়া টায়ার': 'Top selling tyres', 'সবচেয়ে বেশি বিক্রি হওয়া পণ্য': 'Top selling products',
@@ -97,20 +96,20 @@ var Lang = (function () {
     'শুধু কম স্টক': 'Low stock only', 'শুধু বাকি আছে যাদের': 'Only with dues',
     'সাজান: ব্র্যান্ড': 'Sort: brand', 'সাজান: পরিমাণ': 'Sort: quantity', 'সাজান: বেশি স্টক': 'Sort: high stock', 'সাজান: কম স্টক': 'Sort: low stock', 'সাজান: নতুন যোগ করা': 'Sort: newest',
     'সাজান: মোটা সাইজ আগে': 'Sort: size (thick first)',
-    'সাজান: স্টকের মূল্য': 'Sort: stock value', 'সাজান: নাম': 'Sort: name', 'সাজান: বেশি বাকি': 'Sort: highest due',
+    'সাজান: স্টকের মূল্য': 'Sort: stock value', 'সাজান: বেশি বাকি': 'Sort: highest due',
     'সাজান: বেশি কেনা': 'Sort: highest spend', 'সাজান: নতুন': 'Sort: newest', 'সাজান: তারিখ': 'Sort: date',
     'সব ধরন': 'All types', 'খরচের ধরন': 'Expense type', 'কোন টাকা থেকে': 'Paid from',
     'দোকান ভাড়া': 'Shop rent', 'বিদ্যুৎ বিল': 'Electricity bill', 'বেতন': 'Salary', 'চা': 'Tea',
     'মোবাইল / ইন্টারনেট': 'Mobile / internet', 'ট্যাক্স / লাইসেন্স': 'Tax / licence', 'অন্যান্য': 'Other',
-    'ধরন': 'Type', 'টায়ার': 'Tyre', 'টিউব': 'Tube', 'জিনিসের ধরন': 'Item type', 'গাড়ির ধরন': 'Vehicle type',
+    'টায়ার': 'Tyre', 'টিউব': 'Tube', 'জিনিসের ধরন': 'Item type', 'গাড়ির ধরন': 'Vehicle type',
     'মোটরসাইকেল': 'Motorcycle', 'কার / জিপ': 'Car / Jeep', 'সিএনজি / অটো': 'CNG / Auto',
     'ইজি বাইক': 'Easy bike', 'লাগোনা / পিকআপ': 'Laguna / Pickup', 'বাস': 'Bus', 'ট্রাক': 'Truck',
-    'সাইকেল': 'Bicycle', 'পিস': 'pcs', 'কলা': 'pcs',
+    'সাইকেল': 'Bicycle', 'কলা': 'pcs',
     /* ---------- স্টক ফর্ম ---------- */
     'ব্র্যান্ড *': 'Brand *', 'সাইজ *': 'Size *', 'মডেল': 'Model',
     'পণ্যের নাম / ব্র্যান্ড *': 'Product name / Brand *', 'সাইজ / স্পেসিফিকেশন': 'Size / specification',
-    'স্টকে পরিমাণ': 'Quantity in stock', 'ক্রয়মূল্য — প্রতি পিস': 'Buy price — per pc',
-    'ক্রয়মূল্য — প্রতি পিস': 'Buy price — per pc', 'বিক্রয়মূল্য — প্রতি পিস': 'Selling price — per pc',
+    'স্টকে পরিমাণ': 'Quantity in stock',
+    'ক্রয়মূল্য — প্রতি পিস': 'Buy price — per pc',
     'মোট কত টাকা দিলেন': 'Total amount paid', 'সম্ভাব্য বিক্রয় মোট': 'Potential sale total',
     'খালি রাখলে বিক্রির সময় দর লিখবেন': 'Leave blank to set the price during sale', 'না জানলে খালি রাখুন': 'Leave blank if unknown',
     'খালি রাখলেও stock যোগ হবে': 'Stock can be added even if left blank',
@@ -124,7 +123,7 @@ var Lang = (function () {
     'এখন কত টাকা নিলেন': 'Amount received now', 'টাকার ধরন': 'Payment method',
     'এই বিক্রির পর বাকি': 'Due after this sale', 'স্টকে:': 'In stock:',
     'ফিটিং ফ্রি': 'Free fitting', 'নিয়মিত কাস্টমার': 'Regular customer', 'নিজের লেখা আইটেম (স্টকে নেই)': 'Custom item (not in stock)',
-    'কেনাকাটার হিসাব': 'Purchase history', 'টায়ারের সাইজ': 'Tyre size', 'ফোন': 'Phone',
+    'কেনাকাটার হিসাব': 'Purchase history', 'পণ্য নির্বাচন': 'Select product', 'আগের বকেয়া': 'Previous due', '＋ আগের বকেয়া': '+ Previous due', 'পুরোনো হিসাবের বাকি': 'Due from old records', 'আগের বকেয়া যোগ করুন': 'Add previous due', 'আগের বকেয়া বদলান': 'Edit previous due', 'জমা সেভ করুন': 'Save payment', 'আগের বকেয়া যোগ করবেন?': 'Add previous due?', 'হ্যাঁ, যোগ করুন': 'Yes, add', 'ইনভয়েস ▾': 'Invoice ▾', 'ইনভয়েস দেখুন (A4)': 'View invoice (A4)', 'A5 ইনভয়েস': 'A5 invoice', '🧾 থার্মাল প্রিন্ট': '🧾 Thermal print', '🗑 ইনভয়েস মুছে ফেলুন': '🗑 Delete invoice', '＋ ক্যাশ': '+ Cash', 'ইনভয়েস দেখুন': 'View invoice', 'আরও ▾': 'More ▾', 'নতুন সাপ্লায়ার': 'New supplier', '＋ নতুন সাপ্লায়ার': '+ New supplier', 'মোট দিয়েছি': 'Total paid', 'দিয়েছি': 'Paid', 'শেষ কেনা': 'Last purchase', 'টাকা দিন': 'Pay', 'কেনা মাল': 'Goods bought', 'দেওয়া টাকা': 'Payments made', 'অগ্রিম দেওয়া': 'Paid in advance', 'সাপ্লায়ারের তথ্য বদলান': 'Edit supplier', '— সাপ্লায়ার নেই —': '— No supplier —', 'নতুন সাপ্লায়ারের নাম': 'New supplier name', 'সাপ্লায়ারকে এখন দিলেন': 'Paid to supplier now', 'মোট দাম': 'Total price', 'কত টাকা দিলেন': 'Amount paid', 'পুরো বাকি': 'Full due', 'কোনো সাপ্লায়ার নেই।': 'No suppliers yet.', 'আগের বাকি': 'Previous due', '＋ আগের বাকি': '+ Previous due', 'আগের বাকি যোগ করুন': 'Add previous due', 'আগের বাকি বদলান': 'Edit previous due', 'আগের বাকি যোগ করবেন?': 'Add previous due?', 'ছাড় দিন': 'Give discount', 'দিনের খরচ': 'Day expense', 'কত পিস *': 'How many pcs *', 'কত কেজি *': 'How many kg *', 'কত ফুট *': 'How many ft *', 'কত লিটার *': 'How many litres *', 'দোকানের নাম ইংরেজিতে': 'Shop name in English', 'দোকানের নাম বাংলায়': 'Shop name in Bangla', 'ইনভয়েস সেটিংস': 'Invoice settings', 'কেনার হিসাব': 'Purchase history', 'বাকিটা কবে দেবে': 'When will the rest be paid', 'একই ধরনের আরও পণ্য যোগ করব': 'Add more items of the same type', 'আজকের সংক্ষিপ্ত হিসাব': 'Today at a glance', 'বিক্রি হওয়া মাল': 'Items sold', 'আজকের বিলে বাকি': 'Due on today’s bills', 'পুরোনো বাকি আদায়': 'Old dues collected', 'নতুন কাস্টমার': 'New customers', 'সবচেয়ে বেশি বিক্রি': 'Top seller', 'মেয়াদ পার হওয়া বাকি': 'Overdue dues', 'জমার তারিখ': 'Payment date', 'আগের বকেয়া (না থাকলে খালি রাখুন)': 'Previous due (leave blank if none)', 'আগের বকেয়ার নোট': 'Previous due note', 'টাকা জমা — আগের বকেয়া': 'Take payment — previous due', 'বেশি বিক্রয়মূল্য': 'Highest sales value', 'বেশি লাভ': 'Highest profit', 'বেশি পরিমাণ': 'Highest quantity', 'মোট ও ইনভয়েস': 'Total & invoice', 'জমা': 'Paid', 'বকেয়া জমা': 'Pay due', 'টায়ারের সাইজ': 'Tyre size', 'ফোন': 'Phone',
     'মোট কেনা টাকা': 'Total purchased', 'বাকি আছে': 'Outstanding',
     'Address': 'Address', 'নাম (ইংরেজি)': 'Name (English)',
     /* ---------- সেটিংস ---------- */
@@ -148,8 +147,7 @@ var Lang = (function () {
     'আবার পিন লিখুন': 'Repeat PIN', 'সেটআপ একবারই করতে হবে।': 'Setup is done once only.',
     'স্বাগতম — দোকানের তথ্য দিয়ে শুরু করুন': 'Welcome — start with your shop details',
     /* ---------- অতিরিক্ত (এই রাউন্ডে যোগ) ---------- */
-    '＋ স্টক যোগ': '＋ Add stock', '＋ নতুন খরচ': '＋ New expense', '← ফিরে যান': '← Back',
-    'শুধু মালিক': 'Owner only',
+    '＋ নতুন খরচ': '＋ New expense', '← ফিরে যান': '← Back',
     'নতুন বাকি': 'New due', 'আদায়': 'Collected', 'দেখুন': 'View', 'লাভ %': 'Profit %',
     'পেমেন্ট নং': 'Payment no.', 'কোন ইনভয়েসের': 'For which invoice', 'বিল পাঠান': 'Send bill',
     'ফোল্ডার': 'folder', 'data.json → backups ফোল্ডার': 'folder data.json → backups',
@@ -159,7 +157,7 @@ var Lang = (function () {
     '"সব তথ্য মুছে ফেলুন" চাপলে মালিকের পিন চাইবে এবং আগে একটি ব্যাকআপ কপি রাখবে।':
       '"Delete all data" asks for the owner PIN, clears active cloud data, and keeps a local safety backup.',
     'মোবাইলের নম্বর বসান': 'Enter mobile number',
-    'সব খালি করুন': 'Clear list', 'ফিরিয়ে আনুন': 'Restore', 'সেভ করুন': 'Save',
+    'সব খালি করুন': 'Clear list', 'সেভ করুন': 'Save',
     'মুছে ফেলা তথ্য': 'Deleted items', 'শুধু মালিক': 'Owner only', 'ধরন': 'Type',
     'বিবরণ': 'Description', 'কিছু মুছে ফেলা হয়নি।': 'Nothing has been deleted.',
     'মুছে ফেলা তালিকা খালি করবেন?': 'Clear the deleted list?',
@@ -179,7 +177,7 @@ var Lang = (function () {
     '“সব তথ্য মুছে ফেলুন” চাপলে মালিকের পিন চাইবে এবং আগে একটি ব্যাকআপ কপি রাখবে।':
       '“Delete all data” asks for the owner PIN, clears active cloud data, and keeps a local safety backup.',
     /* ---------- মেসেজ / অবস্থা ---------- */
-    'ব্র্যান্ড লিখুন।': 'Enter brand.', 
+    'ব্র্যান্ড লিখুন।': 'Enter brand.',
     'সাইজ লিখুন।': 'Enter size.', 'পরিমাণ ঠিক লিখুন।': 'Enter a valid quantity.',
     'ক্রয়মূল্য লিখুন।': 'Enter buy price.', 'কত পিস পেয়েছেন লিখুন।': 'Enter quantity received.',
     'আইটেমের নাম লিখুন।': 'Enter item name.', 'কাস্টমারের নাম লিখুন।': 'Enter customer name.',
@@ -272,7 +270,7 @@ var Lang = (function () {
     'পুরো টাকা জমা রাখা যায়নি — পরে Cash Collection থেকে যোগ করুন।': 'Could not record the payment — add it later from Cash Collection.',
     'বিস্তারিত হিসাব দেখতে চান?': 'Want to see detailed analysis?',
     'যে হিসাব দরকার, সেটি বেছে নিন': 'Choose the section you want to review',
-    'এই মাসের হিসাব': 'This month overview', 'এই মাসের ইনভয়েস': "This month's invoices",
+    'এই মাসের হিসাব': 'This month overview', 'এই মাসের ইনভয়েস': "This month's invoices", 'আজকের ইনভয়েস': "Today's invoices",
     /* ---------- বাকি তালিকা (Due list) ---------- */
     'বাকি তালিকা': 'Due list', 'মোট পাওনা': 'Total due', 'মোট বাকি': 'Total due',
     'বাকি ইনভয়েস': 'Due invoices', 'রিমাইন্ডার': 'Reminder', 'সর্বশেষ ইনভয়েস': 'Latest invoice',
@@ -287,7 +285,7 @@ var Lang = (function () {
     'এই হিসাবে নির্ধারিত বকেয়া নেই।': 'There is no due set on this account.',
     'পেমেন্ট সেভ হয়েছে। বকেয়া কমেছে।': 'Payment saved. The due has decreased.',
     'পেমেন্ট সেভ হয়েছে — রসিদ খুলবেন?': 'Payment saved — open the receipt?',
-    'বন্ধ করুন': 'Close', 'রসিদ খুলুন': 'Open receipt',
+    'রসিদ খুলুন': 'Open receipt',
     'স্টক মূল্য': 'Stock value', 'স্টক পাতায় যান →': 'Go to stock →', '← ড্যাশবোর্ড': '← Dashboard',
     'ইনভয়েস সেটিংস (ইনভয়েসে যা যা ছাপা হবে)': 'Invoice settings (what will be printed)',
     'ইনভয়েসের উপরের লেখা': 'Invoice heading text', 'ইনভয়েস সাধারণত কোন কাগজে': 'Default invoice paper',
@@ -389,7 +387,7 @@ var Lang = (function () {
     '＋ নতুন পণ্য': '＋ New Product',
     'স্টকে এখনো কোনো পণ্য নেই।': 'No products in stock yet.',
     'কোনো পণ্য মেলেনি।': 'No products matched.',
-    'পুরো টাকা পাওয়া': 'Fully paid',
+    'পুরো টাকা পাওয়া': 'Fully paid', 'কোনো ইনভয়েস নেই।': 'No invoices.', 'মূল বিল': 'Bill', 'চূড়ান্ত বিল': 'Final bill', 'মোট ছাড় দেওয়া হয়েছে': 'Total discount given', 'বাকি তালিকা দেখুন →': 'View due list →', 'সব ইনভয়েস': 'All invoices', 'প্রত্যাশিত ক্যাশ': 'Expected cash', 'প্রকৃত ক্যাশ': 'Actual cash', 'কম / বেশি': 'Short / over',
     'আংশিক টাকা': 'Partial payment',
     'আবার টাকা যোগ করা যাবে': 'More payment can be added',
     'এখনও টাকা যোগ হয়নি': 'No payment added yet',
@@ -407,6 +405,15 @@ var Lang = (function () {
 
   /* সংখ্যা/অঙ্ক সহ যেসব লেখা নিজে থেকে বানানো হয় — সেগুলোর নিয়ম */
   var RULES = [
+    /* বিলের আইটেম লাইনে পণ্যের ধরন, যেমন "IRC 3.00-17 টিউব ×1" — নাম বা ঠিকানায় হাত দেয় না */
+    [/(?<![ঀ-৿])টায়ার(?=\s*×)/g, 'Tyre'],
+    [/(?<![ঀ-৿])টায়ার জেল(?=\s*×)/g, 'Tyre gel'],
+    [/(?<![ঀ-৿])পলি ত্রিপল(?=\s*×)/g, 'Poly tarpaulin'],
+    [/(?<![ঀ-৿])মোটর অয়েল(?=\s*×)/g, 'Motor oil'],
+    [/(?<![ঀ-৿])ব্যাটারি(?=\s*×)/g, 'Battery'],
+    [/(?<![ঀ-৿])টিউব(?=\s*×)/g, 'Tube'],
+    [/(?<![ঀ-৿])রিম(?=\s*×)/g, 'Rim'],
+    [/(?<![ঀ-৿])রশি(?=\s*×)/g, 'Rope'],
     /* এই এন্ট্রিগুলো নিচের সাধারণ "মোট" নিয়মের আগে থাকতে হবে, নাহলে "মোট বকেয়া:"-এর
        "মোট" অংশটুকু আগেই বদলে গিয়ে বাকি অংশ বাংলায় রয়ে যায়। */
     [/মোট বকেয়া:\s*/g, 'Total due: '],
@@ -574,7 +581,7 @@ var Lang = (function () {
     [/(সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|শনিবার|রবিবার)\s*,\s*([০-৯0-9]+)\s*(জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*([০-৯0-9]+)/g,
       function (m, dw, dd, mo, yy) { return D[dw] + ', ' + dd + ' ' + D[mo] + ' ' + yy; }],
     [/([০-৯0-9]+)\s*(জানুয়ারি|ফেব্রুয়ারি|মার্চ|এপ্রিল|মে|জুন|জুলাই|আগস্ট|সেপ্টেম্বর|অক্টোবর|নভেম্বর|ডিসেম্বর)\s*([০-৯0-9]+)/g,
-      function (m, dd, mo, yy) { return dd + ' ' + D[mo] + ' ' + yy; }]
+      function (m, dd, mo, yy) { return dd + ' ' + D[mo] + ' ' + yy; }],
   ];
 
   var TITLE = {
@@ -760,6 +767,13 @@ var Lang = (function () {
     if (isEn() && enName && String(enName).trim()) return String(enName).trim();
     return bnName || enName || '';
   }
+  /* বিল / রসিদের কাস্টমারের নাম — কাস্টমার রেকর্ড থাকলে সেখান থেকে, যাতে English মোডে ইংরেজি নাম দেখায় */
+  function custName(o) {
+    var c = o && o.customerId && window.DB && DB.customerById ? DB.customerById(o.customerId) : null;
+    if (c) return showName(c.nameBn || c.name, c.name);
+    return showName((o && (o.customerNameBn || o.customerName)) || '', '');
+  }
 
-  return { apply: apply, refresh: refresh, bind: bind, set: set, lang: lang, isEn: isEn, translate: translate, showName: showName, dict: D };
+
+  return { apply: apply, refresh: refresh, bind: bind, set: set, lang: lang, isEn: isEn, translate: translate, showName: showName, custName: custName, dict: D };
 })();

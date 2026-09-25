@@ -247,8 +247,8 @@ var Sale = (function () {
         '<button class="qty-btn" data-minus="' + i + '">−</button>' +
         '<input class="mini-input" style="width:52px;text-align:center" type="number" min="1" step="1" value="' + l.qty + '" data-qty="' + i + '">' +
         '<button class="qty-btn" data-plus="' + i + '">+</button></div>' + warn + '</td>' +
-        '<td class="num"><div class="price-edit"><input class="mini-input" style="width:110px" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? l.price : '') + '" data-price="' + i + '"><button class="qty-btn price-later" type="button" data-clear-price="' + i + '" title="দর মুছুন">দর মুছুন</button></div></td>' +
-        '<td class="num"><b>' + F.money(l.qty * l.price) + '</b></td>' +
+        '<td class="num"><div class="price-edit"><input class="mini-input" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? l.price : '') + '" data-price="' + i + '">' + (F.num(l.price) > 0 ? '<button class="price-clear" type="button" data-clear-price="' + i + '" title="দর মুছুন" aria-label="দর মুছুন">×</button>' : '') + '</div></td>' +
+        '<td class="num"><input class="mini-input line-total-input" type="number" step="0.01" min="0" value="' + (F.num(l.price) > 0 ? DB.round2(l.qty * l.price) : '') + '" data-total="' + i + '"></td>' +
         '<td><div class="row-actions"><button class="btn small ghost" data-del="' + i + '">✕</button></div></td>' +
         '</tr>';
     }).join('') : '';
@@ -263,6 +263,18 @@ var Sale = (function () {
         var v = raw ? F.num(raw) : 0;
         cart[i].price = v > 0 ? v : 0;
         cart[i].pending = !(v > 0);
+        renderCart();
+      };
+    });
+    /* মোট টাকা লিখলে পরিমাণ দিয়ে ভাগ করে এক পিসের দর নিজে বসে; পরে পরিমাণ বদলালে দর একই থাকে, মোট বাড়ে-কমে */
+    tb.querySelectorAll('[data-total]').forEach(function (inp) {
+      inp.onchange = function () {
+        var i = +inp.getAttribute('data-total');
+        var raw = String(inp.value || '').trim();
+        var t = raw ? F.num(raw) : 0;
+        var q = F.num(cart[i].qty) || 1;
+        cart[i].price = t > 0 ? DB.round2(t / q) : 0;
+        cart[i].pending = !(t > 0);
         renderCart();
       };
     });
@@ -313,7 +325,6 @@ var Sale = (function () {
     var hasPendingPrice = cart.some(function (l) { return F.num(l.price) <= 0 || l.pending === true; });
     document.getElementById('billSub').textContent = hasItems ? F.money(c.sub) : '';
     document.getElementById('billTotal').textContent = hasItems ? F.money(c.total) : '';
-    document.getElementById('billProfit').textContent = hasItems ? (hasPendingPrice ? '—' : (F.money(c.profit) + (c.cost ? ' (' + (c.total > 0 ? (c.profit / c.total * 100).toFixed(0) : 0) + '%)' : ''))) : '';
     // discount reason box + per-invoice "show discount" toggle: only shown when a discount is given
     var rr = document.getElementById('discReasonRow');
     if (rr) rr.hidden = !(c.discount > 0);
@@ -360,7 +371,7 @@ var Sale = (function () {
       var names = over.map(function (l) { return l.name + ' (' + l.stock + ' স্টকে আছে, বিক্রি করা হচ্ছে ' + l.qty + ')'; }).join('<br>');
       UI.confirmDialog({
         title: 'স্টকে যথেষ্ট নেই',
-        message: 'এই আইটেমগুলো স্টকের চেয়ে বেশি:<br><b>' + names + '</b><br><br>তবুও বিক্রি করবেন? স্টক ঋণাত্মক হয়ে যাবে (সাধারণত এর মানে আপনি নতুন স্টক যোগ করতে ভুলে গেছেন)।',
+        message: 'এই আইটেমগুলো স্টকের চেয়ে বেশি:<br><b>' + names + '</b><br><br>তবুও বিক্রি করবেন? স্টক ঋণাত্মক হয়ে যাবে। সাধারণত এর মানে নতুন স্টক যোগ করতে ভুলে গেছেন।',
         confirmText: 'তবুও বিক্রি করুন', danger: true
       }).then(function (ok) { if (ok) doSave(); });
       return;
@@ -484,68 +495,6 @@ var Sale = (function () {
     } finally {
       savingSale = false;
     }
-  }
-
-  /* ---------------- hold / resume ---------------- */
-  function hold() {
-    if (!cart.length) { UI.toast('রাখার মতো কিছু নেই — বিল খালি।', 'warn'); return; }
-    DB.state.heldSales = DB.state.heldSales || [];
-    DB.state.heldSales.push({
-      id: DB.uid('hold'), at: new Date().toISOString(), cart: cart, customerId: customerId, vehicleNo: vehicleNo,
-      walkInCash: walkInCash, discount: calc().discount,
-      discountReason: document.getElementById('billDiscountReason').value,
-      showDiscount: (function () { var el = document.getElementById('saleShowDiscount'); return el ? !!el.checked : false; })(),
-      note: ''
-    });
-    DB.save();
-    reset();
-    UI.toast('বিল রেখে দেওয়া হয়েছে। “রাখা বিল খুলুন” চেপে ফিরিয়ে আনুন।', 'ok');
-  }
-  function resume() {
-    var list = DB.state.heldSales || [];
-    if (!list.length) { UI.toast('কোনো রাখা বিল নেই।', 'warn'); return; }
-    UI.modal({
-      title: 'রাখা বিলগুলো',
-      body: '<table class="table compact"><thead><tr><th>রাখা হয়েছে</th><th>কাস্টমার</th><th class="num">আইটেম</th><th class="num">টাকা</th><th></th></tr></thead><tbody>' +
-        list.map(function (h) {
-          var amt = h.cart.reduce(function (a, l) { return a + l.qty * l.price; }, 0) - F.num(h.discount);
-          var c = h.customerId ? DB.customerById(h.customerId) : null;
-          return '<tr><td>' + F.dt(h.at) + '</td><td>' + F.esc(c ? (c.nameBn || c.name) : 'ওয়াক-ইন') + '</td>' +
-            '<td class="num">' + h.cart.reduce(function (a, l) { return a + l.qty; }, 0) + '</td>' +
-            '<td class="num">' + F.money(amt) + '</td>' +
-            '<td><div class="row-actions"><button class="btn small" data-res="' + h.id + '">খুলুন</button><button class="btn small ghost" data-rm="' + h.id + '">মুছে ফেলুন</button></div></td></tr>';
-        }).join('') + '</tbody></table>',
-      buttons: [],
-      onOpen: function (root) {
-        root.querySelectorAll('[data-res]').forEach(function (b) {
-          b.onclick = function () {
-            var h = list.filter(function (x) { return x.id === b.getAttribute('data-res'); })[0];
-            cart = (h.cart || []).map(function (line) {
-              var x = Object.assign({}, line);
-              if (x.productId) {
-                var p = DB.productById(x.productId);
-                if (p) { x.stock = F.num(p.qty); x.cost = F.num(p.buyPrice); x.name = Stock.label(p); x.description = p.description || p.name || Stock.label(p); x.brand = p.brand; x.size = p.size; x.type = String(p.type || '').trim(); x.model = String(p.model || '').trim(); x.code = p.code; }
-              }
-              return x;
-            }); customerId = h.customerId || ''; vehicleNo = h.vehicleNo || '';
-            setWalkInCash(h.walkInCash === true && !customerId);
-            document.getElementById('billDiscount').value = F.num(h.discount) ? h.discount : '';
-            document.getElementById('billDiscountReason').value = h.discountReason || '';
-            var sdCb2 = document.getElementById('saleShowDiscount'); if (sdCb2) sdCb2.checked = (h.showDiscount === true);
-            if (customerId) { var c = DB.customerById(customerId); if (c) showCustBox(c); } else hideCustBox();
-            DB.state.heldSales = list.filter(function (x) { return x.id !== h.id; });
-            DB.save(); renderCart(); UI.closeModal();
-            UI.toast('রাখা বিল খোলা হয়েছে।', 'ok');
-          };
-        });
-        root.querySelectorAll('[data-rm]').forEach(function (b) {
-          b.onclick = function () {
-            DB.state.heldSales = list.filter(function (x) { return x.id !== b.getAttribute('data-rm'); });
-            DB.save(); UI.closeModal(); resume();
-          };
-        });
-      }
-    });
   }
 
   /* If the shopkeeper typed a new name / phone / vehicle instead of picking a saved customer,

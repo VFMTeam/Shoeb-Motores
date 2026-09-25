@@ -38,6 +38,8 @@ var UI = (function () {
     ['দর (', 'Rate ('],
     ['টাকা (', 'Amount ('],
     [' পিস × ', ' pcs × '],
+    ['আগের বকেয়া', 'Previous due'],
+    ['নোট', 'Note']
   ];
   function enHtml(h) {
     if (!EN()) return h;
@@ -147,9 +149,6 @@ var UI = (function () {
     return name;
   }
 
-  function priceCell(i) {
-    return F.bn(F.moneyPlain(i.price));
-  }
   function signBlock(sh) {
     /* সই করার জন্য উপরে ফাঁকা জায়গা, নিচে রেখা — A4-এ বড় করে */
     return '<div class="sign"><span class="sign-space"></span>' +
@@ -205,7 +204,6 @@ function invoiceA4Bn(sale) {
       var type = invoiceItemDetail(i, 'type');
       var model = invoiceItemDetail(i, 'model');
       var description = invoiceItemDetail(i, 'description') || String(i.name || '').trim();
-      var pend = DB.itemPending(i);
       /* Small line contains stock values only — no generated labels such as “মডেল:”. */
       var subBits = [];
       if (type) subBits.push(type);
@@ -223,7 +221,6 @@ function invoiceA4Bn(sale) {
     }).join('');
 
     var dReason = (sale.discountReason || '').trim();
-    var hasPendingPrice = DB.saleHasPending && DB.saleHasPending(sale);
     /* ইনভয়েসে ছাড় দেখানো/লুকানো — সেটিংস পরে বদলালেও এই ইনভয়েস তৈরির সময়কার অবস্থা অনুযায়ী চলবে। */
     var showDiscount = sale.showDiscount !== false;
     var sums = '';
@@ -234,9 +231,6 @@ function invoiceA4Bn(sale) {
     sums += '<tr class="grand"><td class="lab">মোট টাকা</td><td class="amt">' + m(sale.total) + '</td></tr>';
 
     var totalQty = sale.items.reduce(function (a, i) { return a + F.num(i.qty); }, 0);
-    var kv = function (k, v, cls) {
-      return '<div class="kv ' + (cls || '') + '"><span class="k">' + k + '</span><span class="v">' + v + '</span></div>';
-    };
 
     return '' +
       '<div class="inv-wrap inv-a4">' +
@@ -361,6 +355,13 @@ function invoiceA4Bn(sale) {
   function invoiceThermal(sale) { return invoiceThermalBn(sale); }
 
   /* ---------- মূল্য পরিশোধের রসিদ ---------- */
+  function openingRemaining(rec) {
+    if (rec.openingDueId) {
+      var e = DB.openingEntries(rec.customerId).filter(function (x) { return x.id === rec.openingDueId; })[0];
+      if (e) return e.due;
+    }
+    return DB.openingDue(rec.customerId);
+  }
   function collectionReceiptA4Bn(rec) {
     rec = DB.collectionReceipt(rec);
     var sale = DB.saleById(rec.saleId);
@@ -369,7 +370,16 @@ function invoiceA4Bn(sale) {
     var name = rec.customerName || (sale && (sale.customerNameBn || sale.customerName)) || 'ওয়াক-ইন কাস্টমার';
     var customer = (rec.openingBalance || rec.paymentGroup) ? DB.customerById(rec.customerId) : null;
     var phone = rec.customerPhone || (sale ? (sale.customerPhone || '') : (customer ? customer.phone || '' : ''));
-    var remaining = rec.paymentGroup ? rec.balanceAfter : rec.openingBalance ? DB.openingDue(rec.customerId) : (sale && !DB.saleHasPending(sale) ? Math.max(0, F.num(sale.due)) : null);
+    var remaining = rec.paymentGroup ? rec.balanceAfter : rec.openingBalance ? openingRemaining(rec) : (sale && !DB.saleHasPending(sale) ? Math.max(0, F.num(sale.due)) : null);
+    /* গাড়ির নম্বর: এই রসিদের ইনভয়েসগুলোর গাড়ি; না থাকলে কাস্টমারের সেভ করা গাড়ি। */
+    var vehicles = [];
+    function addVeh(v) { v = String(v || '').trim(); if (v && vehicles.indexOf(v) < 0) vehicles.push(v); }
+    if (sale) addVeh(sale.vehicleNo);
+    (rec.paymentParts || []).forEach(function (p) { var ps = p.saleId && DB.saleById(p.saleId); if (ps) addVeh(ps.vehicleNo); });
+    if (!vehicles.length) {
+      var vc = DB.customerById(rec.customerId || (sale && sale.customerId) || '');
+      ((vc && vc.vehicles) || []).forEach(function (v) { addVeh(v.number); });
+    }
     return '<div class="inv-wrap inv-a4 receipt-a4">' +
       '<div class="inv-head">' +
         '<div class="inv-head-left">' + logoTag('inv-logo','img/logo-print.jpg') +
@@ -389,8 +399,10 @@ function invoiceA4Bn(sale) {
       '<div class="receipt-body">' +
         '<div class="receipt-row"><span>ক্রেতার নাম</span><b>' + F.esc(name) + '</b></div>' +
         (phone ? '<div class="receipt-row"><span>মোবাইল</span><b>' + bn(F.esc(phone)) + '</b></div>' : '') +
+        (vehicles.length ? '<div class="receipt-row"><span>গাড়ির নম্বর</span><b>' + F.esc(vehicles.join(', ')) + '</b></div>' : '') +
         '<div class="receipt-row"><span>বিক্রয় চালান</span><b>' + F.esc(rec.invoiceNo || (sale && sale.invoiceNo) || '') + '</b></div>' +
         (rec.paymentParts ? '<table class="table"><tbody>' + rec.paymentParts.map(function (p) { return '<tr><td>' + F.esc(p.invoiceNo || 'বকেয়া') + '</td><td class="num">৳ ' + m(p.amount) + '</td></tr>'; }).join('') + '</tbody></table>' : '') +
+        (rec.openingBalance && rec.openingNote ? '<div class="receipt-row"><span>নোট</span><b>' + F.esc(rec.openingNote) + '</b></div>' : '') +
         '<div class="receipt-paid"><span>এই রসিদে প্রাপ্ত টাকা</span><strong>৳ ' + m(rec.amount) + '</strong></div>' +
         (rec.pendingPrice ? '<div class="receipt-hint">দর অপেক্ষমাণ ইনভয়েস নিচের অবশিষ্ট হিসাবের বাইরে।</div>' : '') +
         (remaining === null ? '<div class="receipt-hint">চালানের কিছু মালের দাম এখনও দেওয়া হয়নি; পরে দাম বসালে অবশিষ্ট হিসাব আপডেট হবে।</div>' :
@@ -652,7 +664,7 @@ function invoiceA4Bn(sale) {
       '<button class="btn small" id="btnPrintNow">🖨 প্রিন্ট</button>' +
       '<button class="btn small primary" id="btnPdfNow">⬇ PDF</button>' +
       '<button class="btn small ghost" id="btnWinAgain">নতুন জানালায় খুলুন</button>' +
-      (DB.saleHasPending(sale) ? '<button class="btn small ghost" id="btnSetPrice">' + (EN() ? 'Set price (unconfirmed)' : 'দর বসান (নিশ্চিত হয়নি)') + '</button>' : '') +
+      (DB.saleHasPending(sale) ? '<button class="btn small ghost" id="btnSetPrice">' + (EN() ? 'Set price' : 'দর বসান') + '</button>' : '') +
       '</div><div id="invPreviewBox"></div>';
     modal({
       title: (EN() ? 'Invoice ' : 'ইনভয়েস ') + sale.invoiceNo, body: wrap, wide: true,

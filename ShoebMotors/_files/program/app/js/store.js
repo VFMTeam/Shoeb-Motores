@@ -59,9 +59,6 @@ var DB = (function () {
   }
   function deletedList() { return state.deleted || []; }
   function deletedById(id) { return (state.deleted || []).filter(function (d) { return d.id === id; })[0]; }
-  function dropDeleted(id) {
-    state.deleted = (state.deleted || []).filter(function (d) { return d.id !== id; });
-  }
   function defaultSettings() {
     return {
       shopName: 'Shoeb Motors & Tyre House',
@@ -98,6 +95,8 @@ var DB = (function () {
       expenses: [],
       heldSales: [],
       dayClosings: [],
+      suppliers: [],               /* সাপ্লায়ার — কার কাছ থেকে মাল কিনি */
+      supplierPayments: [],        /* সাপ্লায়ারকে দেওয়া টাকা */
       counters: { invoice: 0, product: 0, customer: 0, payment: 0, expense: 0, vehicle: 0 }
     };
   }
@@ -130,6 +129,18 @@ var DB = (function () {
     s.sales = s.sales || []; s.expenses = s.expenses || [];
     s.heldSales = s.heldSales || [];
     s.dayClosings = Array.isArray(s.dayClosings) ? s.dayClosings : [];
+    s.suppliers = Array.isArray(s.suppliers) ? s.suppliers : [];
+    s.supplierPayments = Array.isArray(s.supplierPayments) ? s.supplierPayments : [];
+    /* আগের স্টক-ক্রয়ে সাপ্লায়ারের নাম শুধু লেখা হিসেবে ছিল — একই নামের সাপ্লায়ার তৈরি করে ক্রয়টি তার সাথে যুক্ত করা হয়। */
+    (s.products || []).forEach(function (p) {
+      (p.purchases || []).forEach(function (x) {
+        var nm = String(x.supplier || '').trim();
+        if (x.supplierId || !nm) return;
+        var sup = s.suppliers.filter(function (y) { return String(y.name || '').trim().toLowerCase() === nm.toLowerCase(); })[0];
+        if (!sup) { sup = { id: 'sup_' + (s.suppliers.length + 1) + '_' + Date.now().toString(36), name: nm, phone: '', address: '', note: '', createdAt: new Date().toISOString() }; s.suppliers.push(sup); }
+        x.supplierId = sup.id;
+      });
+    });
     // receipts = every money-in event (money taken on an invoice + payments against old dues)
     s.receipts = s.receipts || [];
     if (s.payments && s.payments.length) {
@@ -154,7 +165,16 @@ var DB = (function () {
       if (p.pricePending === undefined) p.pricePending = num(p.sellPrice) <= 0;
       if (p.buyPricePending === undefined) p.buyPricePending = num(p.buyPrice) <= 0;
     });
-    s.customers.forEach(function (c) { c.vehicles = c.vehicles || []; c.payments = c.payments || []; });
+    s.customers.forEach(function (c) {
+      c.vehicles = c.vehicles || []; c.payments = c.payments || [];
+      /* আগের বকেয়া এখন আলাদা আলাদা এন্ট্রি (তারিখ + নোট সহ), ইনভয়েসের মতো তালিকায় দেখায় ও আলাদা করে জমা নেওয়া যায়।
+         পুরোনো একক openingBalance থাকলে সেটাকে একটি এন্ট্রিতে রূপান্তর করা হয়। openingBalance = সব এন্ট্রির যোগফল। */
+      if (!Array.isArray(c.openingDues)) {
+        c.openingDues = num(c.openingBalance) > 0 ? [{ id: 'od_' + c.id, date: todayStr(c.openingBalanceUpdatedAt || c.createdAt || Date.now()),
+          amount: round2(c.openingBalance), note: '', createdAt: c.openingBalanceUpdatedAt || c.createdAt || new Date().toISOString() }] : [];
+      }
+      c.openingBalance = round2(c.openingDues.reduce(function (a, e) { return a + num(e.amount); }, 0));
+    });
     s.sales.forEach(function (sale) {
       sale.items = sale.items || []; sale.paid = num(sale.paid); sale.discount = num(sale.discount);
       /* Collection tracking was introduced after the invoice-only build.
@@ -718,18 +738,6 @@ var DB = (function () {
     return { items:itemCount, invoices:invoiceCount };
   }
 
-  /* fix old sales that were saved before this rule */
-  function migratePending(state2) {
-    (state2.sales || []).forEach(function (s) {
-      var dirty = false;
-      (s.items || []).forEach(function (i) {
-        if (i.pricePending === undefined) { i.pricePending = num(i.price) <= 0; dirty = true; }
-      });
-      if (saleHasPending(s)) { /* keep as is */ }
-    });
-    return state2;
-  }
-
   /* ------------------------- cash collection ledger ------------------------- */
   function collectionById(id) {
     return (state.receipts || []).filter(function (r) { return r.id === id && r.type === 'collection'; })[0];
@@ -809,7 +817,7 @@ var DB = (function () {
     var summary = Object.assign({}, parts[0]);
     summary.amount = round2(parts.reduce(function (a,r) { return a + num(r.amount); },0));
     summary.invoiceNo = parts.map(function (r) { return r.invoiceNo; }).join(', ');
-    summary.paymentParts = parts.map(function (r) { return { invoiceNo:r.invoiceNo, amount:r.amount }; });
+    summary.paymentParts = parts.map(function (r) { return { invoiceNo:r.invoiceNo, saleId:r.saleId || '', amount:r.amount }; });
     return summary;
   }
   function payCustomerDue(key, value, date) {
@@ -821,9 +829,12 @@ var DB = (function () {
     if (amount <= 0 || amount > account.total) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং মোট বকেয়ার মধ্যে হতে হবে।');
     var remaining = amount, parts = [];
     if (account.opening > 0) {
-      var openingAmount = Math.min(remaining, account.opening);
-      parts.push({openingBalance:true, saleId:'', invoiceNo:'আগের বকেয়া', amount:openingAmount});
-      remaining = round2(remaining - openingAmount);
+      openingEntries(account.customerId).forEach(function (e) {
+        if (remaining <= 0 || e.due <= 0) return;
+        var openingAmount = Math.min(remaining, e.due);
+        parts.push({openingBalance:true, openingDueId:e.id, openingNote:e.note, saleId:'', invoiceNo:'আগের বকেয়া', amount:openingAmount});
+        remaining = round2(remaining - openingAmount);
+      });
     }
     account.sales.forEach(function (sale) {
       if (remaining <= 0) return;
@@ -894,9 +905,6 @@ var DB = (function () {
     var day = todayStr(date);
     return (state.dayClosings || []).filter(function (r) { return r.date === day; })[0];
   }
-  function dayClosingById(id) {
-    return (state.dayClosings || []).filter(function (r) { return r.id === id; })[0];
-  }
   function saveDayClosing(date, data) {
     var day = todayStr(date), now = new Date().toISOString();
     state.dayClosings = state.dayClosings || [];
@@ -931,8 +939,6 @@ var DB = (function () {
   function productById(id) { return state.products.filter(function (p) { return p.id === id; })[0]; }
   function customerById(id) { return state.customers.filter(function (c) { return c.id === id; })[0]; }
   function saleById(id) { return state.sales.filter(function (s) { return s.id === id; })[0]; }
-  function stockQty(pid) { var p = productById(pid); return p ? num(p.qty) : 0; }
-  function todaysSales() { var t = todayStr(); return state.sales.filter(function (s) { return todayStr(s.date) === t; }); }
 
   // how much each customer owes: the unpaid part of their invoices (each invoice keeps its own
   // paid/due, so a later collection already reduces it — receipts are only the money ledger)
@@ -954,27 +960,176 @@ var DB = (function () {
     if (!Number.isFinite(amount) || amount > 999999999999) throw new Error('টাকার পরিমাণ সীমার বাইরে।');
     return round2(amount);
   }
-  function setOpeningBalance(cid, value) {
-    var c = customerById(cid), amount = balanceAmount(value);
-    if (!c) throw new Error('কাস্টমার পাওয়া যায়নি।');
-    if (amount < openingPaid(cid)) throw new Error('ইতিমধ্যে জমা নেওয়া টাকার চেয়ে আগের বকেয়া কম হতে পারবে না।');
-    c.openingBalance = amount;
+  function openingEntry(c, id) { return (c.openingDues || []).filter(function (e) { return e.id === id; })[0]; }
+  function syncOpeningTotal(c) {
+    c.openingBalance = round2((c.openingDues || []).reduce(function (a, e) { return a + num(e.amount); }, 0));
     c.openingBalanceUpdatedAt = iso();
-    save();
   }
-  function collectOpeningBalance(cid, value) {
+  /* প্রতিটি আগের-বকেয়া এন্ট্রির জমা ও বাকি। নির্দিষ্ট এন্ট্রিতে নেওয়া টাকা সেই এন্ট্রিতেই যায়;
+     পুরোনো (এন্ট্রি-চিহ্ন ছাড়া) জমা পুরোনো এন্ট্রি থেকে ক্রমানুসারে কমে। */
+  function openingEntries(cid) {
+    var c = customerById(cid);
+    if (!c) return [];
+    var list = (c.openingDues || []).map(function (e) { return { id:e.id, date:e.date, amount:round2(e.amount), note:e.note || '', createdAt:e.createdAt, paid:0 }; })
+      .sort(function (x, y) { return String(x.date).localeCompare(String(y.date)) || String(x.createdAt).localeCompare(String(y.createdAt)); });
+    var byId = {}; list.forEach(function (e) { byId[e.id] = e; });
+    var loose = 0;
+    (state.receipts || []).forEach(function (r) {
+      if (r.type !== 'collection' || r.openingBalance !== true || r.customerId !== cid) return;
+      if (r.openingDueId && byId[r.openingDueId]) byId[r.openingDueId].paid += num(r.amount);
+      else loose += num(r.amount);
+    });
+    list.forEach(function (e) {
+      var take = Math.min(loose, Math.max(0, e.amount - e.paid));
+      e.paid = round2(e.paid + take); loose = round2(loose - take);
+      e.due = round2(Math.max(0, e.amount - e.paid));
+    });
+    return list;
+  }
+  function openingDate(date) {
+    var d = String(date || '') || todayStr();
+    var parsed = new Date(d + 'T12:00:00');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || !isFinite(parsed.getTime()) || todayStr(parsed) !== d) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    return d;
+  }
+  /* আগের বকেয়া প্রতি কাস্টমারে একবারই যোগ করা যায়। যোগ করার আগে (নিশ্চিত করার আগে) যাচাই। */
+  function checkNewOpeningDue(cid, value, date) {
     var c = customerById(cid), amount = balanceAmount(value);
     if (!c) throw new Error('কাস্টমার পাওয়া যায়নি।');
-    if (amount <= 0 || amount > openingDue(cid)) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং আগের অবশিষ্ট বকেয়ার মধ্যে হতে হবে।');
+    if ((c.openingDues || []).length) throw new Error('এই কাস্টমারের আগের বকেয়া আগেই যোগ করা হয়েছে।');
+    if (amount <= 0) throw new Error('আগের বকেয়ার পরিমাণ শূন্যের বেশি হতে হবে।');
+    openingDate(date);
+    return amount;
+  }
+  function addOpeningDue(cid, value, date, note) {
+    var c = customerById(cid), amount = checkNewOpeningDue(cid, value, date);
+    var e = { id: uid('od'), date: openingDate(date), amount: amount, note: String(note || '').trim(), createdAt: iso() };
+    c.openingDues = c.openingDues || [];
+    c.openingDues.push(e);
+    syncOpeningTotal(c);
+    save();
+    return e;
+  }
+  function updateOpeningDue(cid, id, value, date, note) {
+    var c = customerById(cid), amount = balanceAmount(value);
+    var e = c && openingEntry(c, id);
+    if (!e) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
+    var paid = (openingEntries(cid).filter(function (x) { return x.id === id; })[0] || {}).paid || 0;
+    if (amount <= 0) throw new Error('আগের বকেয়ার পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (amount < paid) throw new Error('এই বকেয়া থেকে ইতিমধ্যে ' + round2(paid) + ' টাকা জমা হয়েছে; এর চেয়ে কম লেখা যাবে না।');
+    e.amount = amount; e.date = openingDate(date); e.note = String(note || '').trim(); e.updatedAt = iso();
+    syncOpeningTotal(c);
+    save();
+    return e;
+  }
+  function collectOpeningDue(cid, id, value, date, note) {
+    var c = customerById(cid), amount = balanceAmount(value);
+    var info = openingEntries(cid).filter(function (x) { return x.id === id; })[0];
+    if (!c || !info) throw new Error('আগের বকেয়ার এন্ট্রি পাওয়া যায়নি।');
+    if (amount <= 0 || amount > info.due + 0.01) throw new Error('জমার পরিমাণ শূন্যের বেশি এবং এই বকেয়ার বাকির মধ্যে হতে হবে।');
+    if (amount > info.due) amount = info.due;
+    var d = openingDate(date);
     var rec = { id: uid('col'), no: 'COL-' + String(nextNo('payment')).padStart(5, '0'),
-      type: 'collection', openingBalance: true, saleId: '', invoiceNo: 'আগের বকেয়া',
-      customerId: cid, customerName: c.nameBn || c.name || '', amount: amount,
-      date: iso(), createdAt: iso(), note: 'আগের বকেয়া আদায়' };
+      type: 'collection', openingBalance: true, openingDueId: id, openingNote: info.note, saleId: '', invoiceNo: 'আগের বকেয়া',
+      customerId: cid, customerName: c.nameBn || c.name || '', customerPhone: c.phone || '', amount: amount,
+      date: new Date(d + 'T12:00:00').toISOString(), createdAt: iso(), note: String(note || '').trim() || 'আগের বকেয়া আদায়' };
     state.receipts = state.receipts || [];
     state.receipts.push(rec);
+    var saved = save();
+    return { saved: saved, receipt: rec };
+  }
+
+  /* ------------------------- সাপ্লায়ার ------------------------- */
+  function supplierById(id) { return (state.suppliers || []).filter(function (x) { return x.id === id; })[0]; }
+  function saveSupplier(id, data) {
+    var name = String(data.name || '').trim();
+    if (!name) throw new Error('সাপ্লায়ারের নাম লিখুন।');
+    var dup = (state.suppliers || []).filter(function (x) { return x.id !== id && String(x.name || '').trim().toLowerCase() === name.toLowerCase(); })[0];
+    if (dup) throw new Error('এই নামে একজন সাপ্লায়ার আগেই আছে।');
+    var sup = id ? supplierById(id) : null;
+    if (id && !sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if (!sup) { sup = { id: uid('sup'), createdAt: iso() }; state.suppliers = state.suppliers || []; state.suppliers.push(sup); }
+    sup.name = name; sup.phone = String(data.phone || '').trim(); sup.address = String(data.address || '').trim();
+    sup.updatedAt = iso();
+    // নাম বদলালে পুরোনো ক্রয়ের লেখা নামও মিলিয়ে রাখা হয়
+    state.products.forEach(function (p) { (p.purchases || []).forEach(function (x) { if (x.supplierId === sup.id) x.supplier = sup.name; }); });
+    save();
+    return sup;
+  }
+  function purchaseTotal(x) { return round2(num(x.total) || (num(x.qty) * num(x.buyPrice))); }
+  function supplierPurchases(id) {
+    var out = [];
+    state.products.forEach(function (p) {
+      (p.purchases || []).forEach(function (x) {
+        if (x.supplierId !== id) return;
+        out.push({ date: x.date, productId: p.id, product: p.description || p.name || '', unit: p.unit || 'পিস', qty: num(x.qty), buyPrice: num(x.buyPrice), total: purchaseTotal(x), note: x.note || '' });
+      });
+    });
+    return out.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+  }
+  function supplierPaymentsOf(id) {
+    return (state.supplierPayments || []).filter(function (r) { return r.supplierId === id; })
+      .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)); });
+  }
+  /* সাপ্লায়ারের আগের বাকি (পুরোনো খাতা থেকে) — প্রতি সাপ্লায়ারে একবারই যোগ হয়, পরে শুধু বদলানো যায়। */
+  function checkSupplierOpening(id, value, date) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    if (!sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if ((sup.openingDues || []).length) throw new Error('এই সাপ্লায়ারের আগের বাকি আগেই যোগ করা হয়েছে।');
+    if (amount <= 0) throw new Error('আগের বাকির পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    return amount;
+  }
+  function addSupplierOpening(id, value, date, note) {
+    var amount = checkSupplierOpening(id, value, date), sup = supplierById(id);
+    var e = { id: uid('sod'), date: String(date), amount: amount, note: String(note || '').trim(), createdAt: iso() };
+    sup.openingDues = [e];
+    save();
+    return e;
+  }
+  function updateSupplierOpening(id, entryId, value, date, note) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    var e = sup && (sup.openingDues || []).filter(function (x) { return x.id === entryId; })[0];
+    if (!e) throw new Error('আগের বাকির এন্ট্রি পাওয়া যায়নি।');
+    if (amount <= 0) throw new Error('আগের বাকির পরিমাণ শূন্যের বেশি হতে হবে।');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    e.amount = amount; e.date = String(date); e.note = String(note || '').trim(); e.updatedAt = iso();
+    save();
+    return e;
+  }
+  function supplierStats(id) {
+    var sup = supplierById(id);
+    var purchases = supplierPurchases(id), payments = supplierPaymentsOf(id);
+    ((sup && sup.openingDues) || []).forEach(function (e) {
+      purchases.push({ opening: true, entryId: e.id, date: e.date, product: '', unit: '', qty: 0, buyPrice: 0, total: round2(e.amount), note: e.note || '' });
+    });
+    purchases.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+    var total = round2(purchases.reduce(function (a, x) { return a + x.total; }, 0));
+    var paid = round2(payments.reduce(function (a, r) { return a + num(r.amount); }, 0));
+    var last = purchases.length ? purchases[0].date : '';
+    return { purchases: purchases, payments: payments, total: total, paid: paid, due: round2(total - paid), last: last };
+  }
+  function addSupplierPayment(id, value, date, note) {
+    var sup = supplierById(id), amount = balanceAmount(value);
+    if (!sup) throw new Error('সাপ্লায়ার পাওয়া যায়নি।');
+    if (amount <= 0) throw new Error('টাকার পরিমাণ শূন্যের বেশি হতে হবে।');
+    var d = String(date || '') || todayStr();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) throw new Error('সঠিক তারিখ নির্বাচন করুন।');
+    var rec = { id: uid('spay'), supplierId: id, supplierName: sup.name, amount: amount, date: d, note: String(note || '').trim(), createdAt: iso() };
+    state.supplierPayments = state.supplierPayments || [];
+    state.supplierPayments.push(rec);
     save();
     return rec;
   }
+  function removeSupplierPayment(payId) {
+    var rec = (state.supplierPayments || []).filter(function (r) { return r.id === payId; })[0];
+    if (!rec) return false;
+    archiveDeleted('supplier-payment', (rec.supplierName || 'সাপ্লায়ার') + ' — ' + num(rec.amount), rec, { amount: num(rec.amount), date: rec.date });
+    state.supplierPayments = state.supplierPayments.filter(function (r) { return r.id !== payId; });
+    save();
+    return true;
+  }
+
 
   function customerBalance(cid) {
     if (!cid) return 0;
@@ -1033,42 +1188,8 @@ var DB = (function () {
       return true;
     });
   }
-  function receiptsInRange(from, to) {
-    return (state.receipts || []).filter(function (p) {
-      var d = todayStr(p.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
-  function paymentsInRange(from, to) {
-    return (state.receipts || []).filter(function (p) { if (p.type === 'sale') return false;
-      var d = todayStr(p.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
-  function expensesInRange(from, to) {
-    return state.expenses.filter(function (e) {
-      var d = todayStr(e.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
-      return true;
-    });
-  }
   function stockValue() {
     return round2(state.products.reduce(function (a, p) { return a + num(p.qty) * num(p.buyPrice); }, 0));
-  }
-  function expectedProfit() {
-    // স্টকে থাকা সব পণ্য বিক্রয়মূল্যে বিক্রি হলে সম্ভাব্য লাভ (ক্রয়মূল্য বাদ দিয়ে)।
-    // কাস্টমারকে ছাড় দিলে আসল লাভ এর চেয়ে কম হতে পারে — তাই এটি "প্রত্যাশিত/সম্ভাব্য" লাভ।
-    return round2(state.products.reduce(function (a, p) {
-      return a + num(p.qty) * (num(p.sellPrice) - num(p.buyPrice));
-    }, 0));
-  }
-  function totalDue() {
-    return state.customers.reduce(function (a, c) { return a + Math.max(0, customerBalance(c.id)); }, 0);
   }
   function lowStockList() {
     return state.products.filter(function (p) { var limit = num(p.lowStock); return p.active !== false && limit > 0 && num(p.qty) <= limit; });
@@ -1103,22 +1224,22 @@ var DB = (function () {
       writeUnlockState(!!v);
       writePcTrust(!!v);
     },
-    archiveDeleted: archiveDeleted, deletedList: deletedList, deletedById: deletedById, dropDeleted: dropDeleted,
+    archiveDeleted: archiveDeleted, deletedList: deletedList, deletedById: deletedById,
     defaultState: defaultState, normalize: normalize, defaultSettings: defaultSettings,
 round2: round2, num: num, todayStr: todayStr, iso: iso, uid: uid,
   itemPending: itemPending, salePendingItems: salePendingItems, saleHasPending: saleHasPending,
-  recalcSale: recalcSale, backfillMissingProductCost: backfillMissingProductCost, migratePending: migratePending,
+  recalcSale: recalcSale, backfillMissingProductCost: backfillMissingProductCost,
     on: on, emit: emit, fixText: fixText, repairText: repairText,
     get fixedTexts() { return fixedTexts; },
-    productById: productById, customerById: customerById, saleById: saleById, stockQty: stockQty,
-    openingPaid: openingPaid, openingDue: openingDue, setOpeningBalance: setOpeningBalance, collectOpeningBalance: collectOpeningBalance,
-    customerBalance: customerBalance, customerStats: customerStats, productStats: productStats,
+    productById: productById, customerById: customerById, saleById: saleById,
+    openingPaid: openingPaid, openingDue: openingDue, openingEntries: openingEntries, addOpeningDue: addOpeningDue, checkNewOpeningDue: checkNewOpeningDue, updateOpeningDue: updateOpeningDue, collectOpeningDue: collectOpeningDue,
+    customerBalance: customerBalance, supplierById: supplierById, saveSupplier: saveSupplier, supplierStats: supplierStats, checkSupplierOpening: checkSupplierOpening, addSupplierOpening: addSupplierOpening, updateSupplierOpening: updateSupplierOpening, addSupplierPayment: addSupplierPayment, removeSupplierPayment: removeSupplierPayment, customerStats: customerStats, productStats: productStats,
     saleNetFactor: saleNetFactor, itemNetRevenue: itemNetRevenue, itemNetProfit: itemNetProfit,
-    salesInRange: salesInRange, paymentsInRange: paymentsInRange, expensesInRange: expensesInRange,
-    receiptsInRange: receiptsInRange, collectionsInRange: collectionsInRange,
+    salesInRange: salesInRange,
+    collectionsInRange: collectionsInRange,
     dueKey: dueKey, duePaymentAccount: duePaymentAccount, payCustomerDue: payCustomerDue, collectionReceipt: collectionReceipt,
     addCollection: addCollection, removeCollection: removeCollection, collectionById: collectionById, trackedDueTotal: trackedDueTotal, trueDue: trueDue,
-    dayClosingByDate: dayClosingByDate, dayClosingById: dayClosingById, saveDayClosing: saveDayClosing, dayClosingsList: dayClosingsList,
-    stockValue: stockValue, expectedProfit: expectedProfit, totalDue: totalDue, lowStockList: lowStockList, dueReminderList: dueReminderList, todaysSales: todaysSales,
+    dayClosingByDate: dayClosingByDate, saveDayClosing: saveDayClosing, dayClosingsList: dayClosingsList,
+    stockValue: stockValue, lowStockList: lowStockList, dueReminderList: dueReminderList,
   };
 })();

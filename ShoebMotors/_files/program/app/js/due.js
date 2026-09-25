@@ -17,9 +17,10 @@ var DueList = (function () {
     if (!isFinite(target) || !isFinite(now)) return F.d(dateStr) || '—';
     var days = Math.round((target - now) / 86400000);
     var label = '';
-    if (days > 0) label = '<b>⏳ আর ' + F.bn(days) + ' দিন</b>';
-    else if (days === 0) label = '<b class="pend">⏰ আজ</b>';
-    else label = '<b class="pend">⏰ ' + F.bn(Math.abs(days)) + ' দিন পার</b>';
+    var en = window.Lang && Lang.isEn();
+    if (days > 0) label = '<b>⏳ ' + (en ? days + ' days left' : 'আর ' + F.bn(days) + ' দিন') + '</b>';
+    else if (days === 0) label = '<b class="pend">⏰ ' + (en ? 'Today' : 'আজ') + '</b>';
+    else label = '<b class="pend">⏰ ' + (en ? Math.abs(days) + ' days overdue' : F.bn(Math.abs(days)) + ' দিন পার') + '</b>';
     return '<div class="cell-main">' + label + '</div><div class="cell-sub">' + F.d(dateStr) + '</div>';
   }
 
@@ -34,7 +35,7 @@ var DueList = (function () {
       if (due <= 0.009 && !pendingPrice) return;
       var k = keyFor(s), c = s.customerId ? DB.customerById(s.customerId) : null;
       if (!map[k]) map[k] = {
-        key:k, customerId:s.customerId || '', name:(c && (c.nameBn || c.name)) || saleName(s),
+        key:k, customerId:s.customerId || '', name:(c && Lang.showName(c.nameBn || c.name, c.name)) || saleName(s),
         phone:(c && c.phone) || s.customerPhone || '', address:(c && [c.addressBn, c.address].filter(Boolean).join(', ')) || '', due:0, invoiceCount:0, pendingPriceCount:0,
         latestDate:'', latestInvoice:'', latestSaleId:'', latestReference:null, earliestDate:'', reminderDate:''
       };
@@ -65,7 +66,7 @@ var DueList = (function () {
 
   function pay(key) {
     var account = DB.duePaymentAccount(key);
-    if (account.total <= 0) { UI.toast('এই হিসাবে নির্ধারিত বকেয়া নেই।', 'warn'); render(); return; }
+    if (account.total <= 0) { UI.toast('এই হিসাবে নির্ধারিত বকেয়া নেই।', 'warn'); App.refreshAll(); return; }
     var submitted = false;
     UI.modal({ title:'Paid — বকেয়া পরিশোধ',
       body:'<p><b>' + F.esc(account.name) + '</b> · মোট বকেয়া: <b>' + F.money(account.total) + '</b></p>' +
@@ -81,7 +82,7 @@ var DueList = (function () {
             var result = DB.payCustomerDue(key, document.getElementById('duePayAmount').value, document.getElementById('duePayDate').value);
           } catch (err) { UI.toast(F.esc(err.message), 'bad'); return; }
           submitted = true;
-          UI.closeModal(); render();
+          UI.closeModal(); App.refreshAll();
           if (!result.saved) { UI.toast('ডেটা সেভ নিশ্চিত হয়নি। আবার Paid চাপবেন না; সেভ স্ট্যাটাস দেখুন।', 'bad', 8000); return; }
           UI.toast('পেমেন্ট সেভ হয়েছে। বকেয়া কমেছে।', 'ok');
           UI.modal({ title:'পেমেন্ট সেভ হয়েছে — রসিদ খুলবেন?',
@@ -143,8 +144,8 @@ var DueList = (function () {
     tb.querySelectorAll('[data-pay-due]').forEach(function (b) { b.onclick=function () { pay(b.getAttribute('data-pay-due')); }; });
     tb.querySelectorAll('[data-customer]').forEach(function(b){ b.onclick=function(){ Customers.open(b.getAttribute('data-customer')); }; });
     tb.querySelectorAll('[data-dueinv]').forEach(function(b){ b.onclick=function(){
-      var scope=document.getElementById('collectionScope'), search=document.getElementById('collectionSearch');
-      if (scope) scope.value='due';
+      var day=document.getElementById('collectionDay'), search=document.getElementById('collectionSearch');
+      if (day) day.value='';
       if (search) search.value=b.getAttribute('data-phone') || b.getAttribute('data-name') || '';
       App.show('collections');
     }; });
@@ -155,7 +156,7 @@ var DueList = (function () {
     if (wired) return; wired=true;
     var s=document.getElementById('dueSearch'); if (s) s.oninput=UI.debounce(render,160);
     var sort=document.getElementById('dueSort'); if (sort) sort.onchange=render;
-    var c=document.getElementById('dueOpenCollections'); if (c) c.onclick=function(){ var sc=document.getElementById('collectionScope'); if(sc) sc.value='due'; App.show('collections'); };
+    var c=document.getElementById('dueOpenCollections'); if (c) c.onclick=function(){ var d=document.getElementById('collectionDay'), q=document.getElementById('collectionSearch'); if(d) d.value=''; if(q) q.value=''; App.show('collections'); };
   }
   return {render:render, bind:bind, pay:pay};
 })();

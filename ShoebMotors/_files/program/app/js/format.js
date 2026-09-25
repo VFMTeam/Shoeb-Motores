@@ -55,11 +55,6 @@ var F = (function () {
     return String(h12).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0') + ' ' + ampm;
   }
   function dt(dt) { return d(dt) + ', ' + time(dt); }
-  function monthName(yyyy_mm) {
-    var p = (yyyy_mm || '').split('-');
-    var m = parseInt(p[1], 10) - 1;
-    return (enMode() ? EN_MONTHS[m] : BN_MONTHS[m]) + ' ' + p[0];
-  }
   function today() { return DB.todayStr(); }
   function addDays(dateStr, n) {
     var x = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
@@ -146,9 +141,6 @@ var F = (function () {
     if (poisha > 0) s += ' and ' + words(poisha) + ' poisha';
     return s.charAt(0).toUpperCase() + s.slice(1) + ' only';
   }
-  function initials(name) {
-    return String(name || '?').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
-  }
   function csv(rows) {
     return '\ufeff' + rows.map(function (r) {
       return r.map(function (c) {
@@ -165,12 +157,28 @@ var F = (function () {
     document.body.appendChild(a); a.click();
     setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 400);
   }
-  function slug(s) { return String(s || '').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase(); }
+  /* টাকার অঙ্ক কথায় — মাউস রাখলে দেখানোর জন্য, শেষে "মাত্র" ছাড়া */
+  function moneyWords(v) {
+    return (enMode() ? wordsMoney(v) : wordsMoneyBn(v)).replace(/\s*(মাত্র|only)$/, '');
+  }
+  /* root-এর ভেতরে যেখানে শুধু টাকার অঙ্ক লেখা (যেমন "৳ 26,270" বা "মোট: ৳ 1,200"), সেখানে মাউস রাখলে কথায় দেখায় */
+  function wordsHover(root) {
+    if (!root) return;
+    Array.prototype.forEach.call(root.querySelectorAll('*'), function (el) {
+      if (el.children.length || /^(OPTION|SELECT|SCRIPT|STYLE)$/.test(el.tagName)) return;
+      var m = String(el.textContent || '').trim().match(/^(?:[^\d৳]*:\s*)?[−-]?\s*৳\s*([\d,]+(?:\.\d+)?)$/);
+      if (!m) return;
+      var v = num(m[1].replace(/,/g, ''));
+      if (!(v > 0)) return;
+      el.title = moneyWords(v);
+      el.classList.add('money-words');
+    });
+  }
   return {
     money: money, moneyPlain: moneyPlain, bn: bn, withCommas: withCommas, qty: qty, num: num, cur: cur,
-    d: d, dt: dt, weekday: weekday, time: time, monthName: monthName, today: today, addDays: addDays, startOfMonth: startOfMonth,
+    d: d, dt: dt, weekday: weekday, time: time, today: today, addDays: addDays, startOfMonth: startOfMonth,
     startOfYear: startOfYear, relDay: relDay, esc: esc, words: words, wordsMoney: wordsMoney,
-    initials: initials, csv: csv, download: download, slug: slug,
+    csv: csv, download: download, moneyWords: moneyWords, wordsHover: wordsHover,
     wordsBn: wordsBn, wordsMoneyBn: wordsMoneyBn
   };
 })();

@@ -78,7 +78,7 @@ var Settings = (function () {
     var file = ev.target.files && ev.target.files[0];
     ev.target.value = '';
     if (!file) return;
-    if (!/^image\//.test(file.type)) { UI.toast('ছবি ফাইল বেছে নিন (PNG বা JPG)।', 'bad'); return; }
+    if (!/^image\//.test(file.type)) { UI.toast('PNG বা JPG ছবি বেছে নিন।', 'bad'); return; }
     var reader = new FileReader();
     reader.onload = function () {
       var im = new Image();
@@ -244,7 +244,6 @@ var Settings = (function () {
     if (!tb) return;
     var list = DB.deletedList().slice(0, 40);
     tb.innerHTML = list.length ? list.map(function (d) {
-      var s2 = DB.state.settings;
       var kind = d.type === 'sale' ? 'ইনভয়েস' : d.type === 'product' ? 'পণ্য' : d.type === 'customer' ? 'কাস্টমার' : d.type === 'vehicle' ? 'গাড়ি' : 'পুরোনো তথ্য';
       var cls = d.type === 'sale' ? 'bad' : d.type === 'product' ? 'warn' : '';
       return '<tr>' +
@@ -409,7 +408,7 @@ var Settings = (function () {
       if (!DB.deletedList().length) { UI.toast('মুছে ফেলা তালিকা খালি।', 'warn'); return; }
       UI.confirmDialog({
         title: 'মুছে ফেলা তালিকা খালি করবেন?',
-        message: 'শুধু তালিকাটি খালি হবে (প্রোগ্রামের ভেতরের কপি)। <b>ডেটা ফোল্ডারের deleted ফোল্ডারের ফাইলগুলো</b> মুছে যাবে না — ওগুলো থাকবে।',
+        message: 'শুধু প্রোগ্রামের ভেতরের তালিকাটি খালি হবে। <b>ডেটা ফোল্ডারের deleted ফোল্ডারের ফাইলগুলো</b> মুছে যাবে না — ওগুলো থাকবে।',
         danger: true, confirmText: 'হ্যাঁ, খালি করুন'
       }).then(function (ok) {
         if (!ok) return;

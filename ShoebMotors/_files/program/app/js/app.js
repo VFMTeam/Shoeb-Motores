@@ -57,21 +57,6 @@ var App = (function () {
     });
   }
 
-  /* ---------------- router ---------------- */
-var TITLES = {
-    dashboard: ['ড্যাশবোর্ড', 'আজকের হিসাব এক নজরে'],
-    sale: ['নতুন বিক্রি', 'মোট দিন, ইনভয়েস তৈরি করুন'],
-    stock: ['স্টক', 'পণ্যের পরিমাণ ও মূল্য'],
-    detailstock: ['Detail Stock', 'ক্যাটাগরি অনুযায়ী মোট স্টক'],
-    sales: ['বিক্রি ও ইনভয়েস', 'Invoice খুঁজুন ও print করুন'],
-    collections: ['ক্যাশ কালেকশন', 'পুরো বা আংশিক টাকা যোগ করুন'],
-    due: ['বাকি তালিকা', 'কার কাছে কত টাকা পাওনা আছে'],
-    customers: ['কাস্টমার', 'কাস্টমারের তথ্য ও হিসাব'],
-    dayclosing: ['Day Closing', 'দিন শেষে টাকার হিসাব'],
-    reports: ['রিপোর্ট', 'লাভ-ক্ষতির রিপোর্ট'],
-    settings: ['সেটিংস', 'ইনভয়েস, ডেটা ও নিরাপত্তা']
-  };
-
   /* ---------------- app shell (sidebar + topbar + main) ----------------
      শেলের ভেতরে একটি .app-body তৈরি করে topbar ও appMain-কে
      sidebar-এর পাশে বসায়। লগইন/সেটআপ মূল শেলের বাইরে পড়ে থাকে। */
@@ -167,7 +152,7 @@ var TITLES = {
       return;
     }
     if (view === 'settings') settingsGateBypass = false;
-    if ((view === 'reports' || view === 'dayclosing') && !DB.isOwnerUnlocked) {
+    if ((view === 'reports' || view === 'dayclosing' || view === 'suppliers' || view === 'supplier') && !DB.isOwnerUnlocked) {
       requireOwner(function () { show(view); });
       return;
     }
@@ -175,10 +160,6 @@ var TITLES = {
     syncBrowserHistory(view);
     UI.$$('.view').forEach(function (v) { v.hidden = v.id !== 'view-' + view; });
     UI.$$('.nav-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-view') === view); });
-    var tp = document.getElementById('topbarPage');
-    if (tp && TITLES[view]) {
-      tp.innerHTML = '<b>' + F.esc(TITLES[view][0]) + '</b>';
-    }
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'auto' : 'auto' });
 
     if (view === 'dashboard') Dashboard.render();
@@ -190,6 +171,7 @@ var TITLES = {
     if (view === 'dayclosing') DayClosing.render();
     if (view === 'customers') Customers.render();
     if (view === 'customer') { /* rendered by Customers.open */ }
+    if (view === 'suppliers') Suppliers.render();
     if (view === 'reports') Reports.render();
     if (view === 'settings') Settings.fill();
     if (view === 'sale') Sale.onShow();
@@ -206,55 +188,11 @@ var TITLES = {
     if (currentView === 'due') DueList.render();
     if (currentView === 'dayclosing') DayClosing.render();
     if (currentView === 'customers') Customers.render();
+    if (currentView === 'customer' && Customers.refresh) Customers.refresh();
+    if (currentView === 'suppliers') Suppliers.render();
+    if (currentView === 'supplier') Suppliers.refresh();
     if (currentView === 'reports') Reports.render();
     if (currentView === 'settings') Settings.fill();
-  }
-
-  /* ---------------- setup wizard ---------------- */
-  function showSetup() {
-    UI.$$('.view').forEach(function (v) { v.hidden = v.id !== 'view-setup'; });
-    var shell = document.getElementById('appShell'); if (shell) shell.hidden = true;
-    document.getElementById('topbar').hidden = true;
-    document.getElementById('appMain').hidden = true;
-    var st = DB.state.settings;
-    /* First-run setup fields intentionally open blank. No auto values. */
-    document.getElementById('setupShopName').value = '';
-    document.getElementById('setupShopNameBn').value = '';
-    document.getElementById('setupShopTag').value = '';
-    document.getElementById('setupAddress').value = '';
-    document.getElementById('setupPhone').value = '';
-    document.getElementById('setupPrefix').value = '';
-    document.getElementById('setupCurrency').value = '';
-    document.getElementById('setupPin').value = '';
-    document.getElementById('setupPin2').value = '';
-  }
-
-  function bindSetup() {
-    document.getElementById('finishSetupBtn').onclick = function () {
-      var err = document.getElementById('setupError');
-      err.textContent = '';
-      var name = document.getElementById('setupShopName').value.trim();
-      var pin = document.getElementById('setupPin').value.trim();
-      var pin2 = document.getElementById('setupPin2').value.trim();
-      if (!name) { err.textContent = 'অনুগ্রহ করে দোকানের নাম লিখুন।'; return; }
-      if (!/^[0-9]{4,6}$/.test(pin)) { err.textContent = 'পিন ৪ থেকে ৬ সংখ্যার হতে হবে (শুধু সংখ্যা)।'; return; }
-      if (pin !== pin2) { err.textContent = 'দুইবার লেখা পিন মিলছে না।'; return; }
-
-      var st = DB.state.settings;
-      st.shopName = name;
-      st.shopNameBn = document.getElementById('setupShopNameBn').value.trim();
-      st.tagline = document.getElementById('setupShopTag').value.trim();
-      st.address = document.getElementById('setupAddress').value.trim();
-      st.phone = document.getElementById('setupPhone').value.trim();
-      st.invoicePrefix = document.getElementById('setupPrefix').value.trim() || 'INV';
-      st.currency = document.getElementById('setupCurrency').value.trim() || '৳';
-      st.pin = pin;
-      st.setupDone = true;
-
-      DB.isOwnerUnlocked = true;
-      DB.save();
-      enterApp();
-    };
   }
 
   /* ---------------- login ---------------- */
@@ -321,7 +259,7 @@ var TITLES = {
     var shell = document.getElementById('appShell'); if (shell) shell.hidden = false;
     document.getElementById('topbar').hidden = false;
     document.getElementById('appMain').hidden = false;
-    UI.$$('.view').forEach(function (v) { if (v.id === 'view-login' || v.id === 'view-setup') v.hidden = true; });
+    UI.$$('.view').forEach(function (v) { if (v.id === 'view-login') v.hidden = true; });
     booted = true;
     applyBranding();
     applyLock();
@@ -337,13 +275,6 @@ var TITLES = {
     UI.$$('.nav-btn').forEach(function (b) {
       b.onclick = function () { show(b.getAttribute('data-view')); };
     });
-    UI.$$('.nav-more-item').forEach(function (b) {
-      b.onclick = function () {
-        var more = document.getElementById('navMore');
-        if (more) more.open = false;
-        show(b.getAttribute('data-view'));
-      };
-    });
     document.getElementById('lockBtn').onclick = function () {
       if (DB.isOwnerUnlocked) {
         DB.isOwnerUnlocked = false;
@@ -353,9 +284,9 @@ var TITLES = {
         requireOwner(function () { applyLock(); refreshAll(); });
       }
     };
-    Dashboard.bind(); Stock.bind(); Sale.bind(); Sales.bind(); Collections.bind(); DueList.bind(); DayClosing.bind(); Customers.bind();
+    Dashboard.bind(); Stock.bind(); Sale.bind(); Sales.bind(); Collections.bind(); DueList.bind(); DayClosing.bind(); Customers.bind(); Suppliers.bind();
     Reports.bind(); Settings.bind();
-    bindLogin(); bindSetup();
+    bindLogin();
     if (window.Lang) { Lang.bind(); }
 
     document.addEventListener('keydown', function (e) {
